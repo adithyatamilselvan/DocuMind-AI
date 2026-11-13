@@ -11,17 +11,8 @@ async function signUp(page: Page, tag: string) {
   await expect(page).toHaveURL(/\/dashboard/);
 }
 
-test("upload is gated by AI consent, validates files, detects duplicates and downloads", async ({ page }, info) => {
+test("upload validates files, detects duplicates, processes to Ready and downloads", async ({ page }, info) => {
   await signUp(page, info.project.name);
-
-  await page.goto("/upload");
-  await expect(page.getByText("External AI processing is not enabled for this workspace")).toBeVisible();
-  await expect(page.getByLabel("Choose files to upload")).toBeDisabled();
-
-  // Admin grants consent in Settings.
-  await page.goto("/settings");
-  await page.getByLabel(/Allow external AI processing/).check();
-  await expect(page.getByText("Workspace AI setting updated")).toBeVisible();
 
   await page.goto("/upload");
   const input = page.getByLabel("Choose files to upload");
@@ -32,7 +23,7 @@ test("upload is gated by AI consent, validates files, detects duplicates and dow
   await expect(page.getByText("Only PDF, DOCX and TXT files are supported")).toBeVisible();
 
   // Real upload through the proxy to the API.
-  const content = `E2E document ${run} ${info.project.name}\nSome text for the pipeline.\n`;
+  const content = `E2E document ${run} ${info.project.name}\n\nQuarterly revenue grew twelve percent in Europe. `.repeat(3);
   await input.setInputFiles({ name: "e2e-notes.txt", mimeType: "text/plain", buffer: Buffer.from(content) });
   await expect(page.getByText(/uploaded, processing will continue/)).toBeVisible();
 
@@ -40,13 +31,25 @@ test("upload is gated by AI consent, validates files, detects duplicates and dow
   await input.setInputFiles({ name: "renamed.txt", mimeType: "text/plain", buffer: Buffer.from(content) });
   await expect(page.getByText(/Identical to existing document/)).toBeVisible();
 
-  // Appears in the library and the original file can be downloaded unchanged.
+  // The document goes through extraction, chunking, embedding and indexing to "Ready".
   await page.goto("/documents");
   await page.getByRole("link", { name: "e2e-notes" }).click();
   await expect(page.getByRole("heading", { name: "e2e-notes" })).toBeVisible();
+  await expect(page.getByText("Ready", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Language")).toBeVisible();
+
+  // The original file can be downloaded unchanged.
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("link", { name: "Download" }).first().click(),
   ]);
   expect(download.suggestedFilename()).toBe("e2e-notes.txt");
+});
+
+test("workspace consent toggle is available to admins", async ({ page }, info) => {
+  await signUp(page, `consent-${info.project.name}`);
+  await page.goto("/settings");
+  await page.getByLabel(/Allow external AI processing/).check();
+  await expect(page.getByText("Workspace AI setting updated")).toBeVisible();
+  await expect(page.getByLabel(/Allow external AI processing/)).toBeChecked();
 });

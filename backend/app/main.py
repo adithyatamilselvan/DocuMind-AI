@@ -14,6 +14,7 @@ from app.core.indexes import ensure_indexes
 from app.middleware.request_id import RequestIdMiddleware
 from app.modules.ingestion.queue import build_queue, recover_stuck_jobs
 from app.modules.ingestion.stages import register_default_stages
+from app.modules.vector_search.factory import build_vector_store
 from app.storage.factory import build_object_store
 
 log = logging.getLogger("documind")
@@ -29,6 +30,7 @@ async def lifespan(app: FastAPI):
     app.state.email = build_email_sender(settings)
     app.state.store = build_object_store(settings)
     app.state.queue = build_queue(app.state.db, settings, app.state.store)
+    app.state.vectors = build_vector_store(settings)
     register_default_stages()
     await client.admin.command("ping")
     await ensure_indexes(app.state.db)
@@ -73,6 +75,18 @@ def create_app() -> FastAPI:
     async def health():
         await app.state.db.command("ping")
         return {"status": "ok"}
+
+    @app.get("/health/ready", tags=["system"])
+    async def ready():
+        """Readiness: database reachable AND the search indexes verified (not assumed)."""
+        from fastapi.responses import JSONResponse
+
+        await app.state.db.command("ping")
+        vec = await app.state.vectors.health(app.state.db)
+        return JSONResponse(
+            {"status": "ok" if vec["ready"] else "degraded", "search": vec},
+            status_code=200 if vec["ready"] else 503,
+        )
 
     return app
 

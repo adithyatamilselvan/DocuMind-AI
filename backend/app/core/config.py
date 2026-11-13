@@ -56,7 +56,18 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr = Field(SecretStr(""), alias="S3_SECRET_ACCESS_KEY")
 
     # AI providers (server-side only). Embeddings default to a hosted API; "local" = sentence-transformers.
-    embedding_provider: Literal["openai", "local"] = Field("openai", alias="EMBEDDING_PROVIDER")
+    # "hashing" is a deterministic lexical embedder for tests/offline dev only (never in production).
+    embedding_provider: Literal["openai", "local", "hashing"] = Field(
+        "openai", alias="EMBEDDING_PROVIDER"
+    )
+    embedding_model: str = Field("text-embedding-3-large", alias="EMBEDDING_MODEL")
+    embedding_dim: int = Field(1024, alias="EMBEDDING_DIM")
+    embedding_version: str = Field("1", alias="EMBEDDING_VERSION")
+    embedding_batch_size: int = Field(64, alias="EMBEDDING_BATCH_SIZE")
+    openai_api_key: SecretStr = Field(SecretStr(""), alias="OPENAI_API_KEY")
+    openai_base_url: str = Field("https://api.openai.com/v1", alias="OPENAI_BASE_URL")
+    ai_timeout_s: float = Field(60.0, alias="AI_TIMEOUT_S")
+    local_scan_limit: int = Field(20000, alias="LOCAL_VECTOR_SCAN_LIMIT")
 
     # Extraction / OCR
     ocr_enabled: bool = Field(True, alias="OCR_ENABLED")
@@ -77,6 +88,11 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @property
+    def embeds_externally(self) -> bool:
+        """True when document text is sent to a third-party service for embedding."""
+        return self.embedding_provider == "openai"
 
     @property
     def max_upload_bytes(self) -> int:

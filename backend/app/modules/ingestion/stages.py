@@ -104,7 +104,16 @@ async def extract_stage(ctx: StageContext) -> None:
 def register_default_stages() -> list[Stage]:
     """Idempotently (re)build the default stage list.
 
-    Chunking, embedding and indexing stages are appended by Phase 8."""
+    Order matters: extract -> chunk -> embed -> index (COMPLETED only after all succeed)."""
+    from app.modules.ingestion.chunk_stages import chunk_stage, embed_stage, index_stage
+
     STAGES.clear()
-    STAGES.append(Stage("extract", DocumentStatus.EXTRACTING, extract_stage))
+    STAGES.extend(
+        [
+            Stage("extract", DocumentStatus.EXTRACTING, extract_stage),
+            Stage("chunk", DocumentStatus.CHUNKING, chunk_stage),
+            Stage("embed", DocumentStatus.EMBEDDING, embed_stage),
+            Stage("index", DocumentStatus.INDEXING, index_stage),
+        ]
+    )
     return STAGES

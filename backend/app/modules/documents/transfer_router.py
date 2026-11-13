@@ -56,7 +56,7 @@ class ProcessingOut(BaseModel):
 
 def require_ai_consent(ctx: WorkspaceContext, settings: Config) -> None:
     """Hosted embeddings/LLMs send document text to a third party: require explicit consent."""
-    external = settings.embedding_provider != "local"
+    external = settings.embeds_externally
     if external and not ctx.workspace.get("settings", {}).get("ai_processing_consent"):
         raise AppError(
             403,

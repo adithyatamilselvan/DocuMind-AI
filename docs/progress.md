@@ -26,14 +26,19 @@
   detection + Tesseract OCR interface), DOCX (headings, tables, virtual pages), TXT (encoding detection, md headings),
   normalization, language detection, extracted.json stored in object store. Real Tesseract test is skipped locally
   (binary not installed); OCR logic is tested with a fake engine on real rendered page images.
-- [ ] Phases 8-19: not started
+- [x] Phase 8: chunking (page-exact, heading/section paths, tables, overlap), EmbeddingProvider (OpenAI hosted DEFAULT,
+  local sentence-transformers/bge-m3 behind same interface, hashing test-only), vector store abstraction
+  (Atlas $vectorSearch/$search + local dev scan/$text), chunk/embed/index stages (resumable, only-missing embedding,
+  index verified before chunks become searchable, old versions replaced), usage records, /health/ready,
+  scripts/verify_indexes.py (Atlas create/verify/smoke). Atlas paths verified only by captured-pipeline tests (no cluster).
+- [ ] Phases 9-19: not started
 
 ## Test results (observed)
-- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 67 passed, 1 skipped (adds upload/validation/orchestrator/extraction; skipped = real Tesseract)
+- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 94 passed, 1 skipped (adds chunking/embeddings/indexing; skipped = real Tesseract)
 - Ruff clean.
 - Frontend (run in PowerShell, NOT Git Bash: npm scripts fail to find `node` there):
   `npx vitest run` -> 14 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
-  `npx playwright test` -> 14 passed (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
+  `npx playwright test` -> 18 passed (incl. upload -> Ready through the real pipeline with the hashing embedder) (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
   includes a no-horizontal-overflow assertion). E2E uses DB `documind_e2e`, ports 8100/3100.
 
 ## Known limitations
@@ -43,7 +48,7 @@
 - Workspace delete is soft; purge job comes with documents (Phase 6+).
 
 ## Next steps
-Phase 8: chunking, EmbeddingProvider (openai hosted default; local bge-m3 behind same interface; hashing provider for tests only), vector store (atlas + local), chunk/embed/index stages. NOTE: until Phase 8 stages exist, real uploads end FAILED at the final transition (orchestrator needs INDEXING->COMPLETED).
+Phase 9: LLM provider abstraction (Anthropic real client + test-only fake), query understanding/rewrite, hybrid RRF retrieval, reranker interface, context selection, citation validation, RAG service. Needs ANTHROPIC_API_KEY for live runs (mocked until then).
 
 ## Windows notes
 - Use PowerShell for npm/npx. Git Bash cannot launch Node subprocesses spawned via cmd.
@@ -51,3 +56,9 @@ Phase 8: chunking, EmbeddingProvider (openai hosted default; local bge-m3 behind
 
 ## PyMongo async gotcha
 `collection.aggregate()` is a coroutine returning a cursor: use `async for x in await coll.aggregate(...)`. `find()` is not.
+
+## Manual setup still required (cannot be done from here)
+- Docker Desktop (see docs/setup-windows.md) for Redis/MinIO/Celery; Tesseract for local scanned-PDF OCR.
+- MongoDB Atlas M0 + `python backend/scripts/verify_indexes.py --create --smoke` with `VECTOR_BACKEND=atlas`.
+- `OPENAI_API_KEY` (embeddings, default provider) and `ANTHROPIC_API_KEY` (LLM). Without the embedding key real
+  uploads fail with "The embedding provider is not configured"; use EMBEDDING_PROVIDER=hashing for offline demos only.

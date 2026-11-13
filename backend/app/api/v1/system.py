@@ -23,5 +23,5 @@ async def client_config(_: AuthUser, settings: Annotated[Settings, Depends(get_s
         max_upload_mb=settings.max_upload_mb,
         max_files_per_upload=settings.max_files_per_upload,
         allowed_extensions=["pdf", "docx", "txt"],
-        external_ai_processing=settings.embedding_provider != "local",
+        external_ai_processing=settings.embeds_externally,
     )

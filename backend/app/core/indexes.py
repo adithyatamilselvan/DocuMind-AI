@@ -53,6 +53,13 @@ INDEXES: dict[str, list[IndexModel]] = {
         ),
         IndexModel([("workspace_id", ASC), ("document_id", ASC)], name="ws_doc"),
         IndexModel([("chunk_id", ASC)], unique=True, name="uq_chunk_id"),
+        IndexModel([("document_id", ASC), ("document_version_id", ASC)], name="doc_ver"),
+        # keyword search for VECTOR_BACKEND=local (Atlas uses its own Search index)
+        IndexModel(
+            [("content", "text"), ("section_heading", "text")],
+            name="chunk_text",
+            default_language="none",
+        ),
     ],
     "document_insights": [
         IndexModel([("document_version_id", ASC), ("kind", ASC)], unique=True, name="uq_ver_kind"),

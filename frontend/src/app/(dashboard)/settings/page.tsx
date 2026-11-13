@@ -20,7 +20,7 @@ import { errorMessage } from "@/lib/api";
 import { changePasswordSchema } from "@/schemas/auth";
 import { authService } from "@/services/auth";
 import { workspaceService } from "@/services/workspaces";
-import { atLeast } from "@/types";
+import { atLeast, type Workspace } from "@/types";
 
 const profileSchema = z.object({ name: z.string().trim().min(1, "Enter your name").max(100) });
 type PasswordValues = z.infer<typeof changePasswordSchema>;
@@ -64,8 +64,12 @@ export default function SettingsPage() {
   const consent = useMutation({
     mutationFn: (value: boolean) =>
       workspaceService.update(workspace!.id, { settings: { ai_processing_consent: value } }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       toast.success("Workspace AI setting updated");
+      // Write the server's answer into the cache first so the checkbox never flickers back.
+      qc.setQueryData<Workspace[]>(keys.workspaces, (old) =>
+        old?.map((w) => (w.id === updated.id ? updated : w)),
+      );
       qc.invalidateQueries({ queryKey: keys.workspaces });
     },
     onError: (e) => toast.error(errorMessage(e)),

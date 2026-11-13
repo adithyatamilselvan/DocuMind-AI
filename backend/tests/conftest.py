@@ -109,3 +109,12 @@ def fake_stages():
     yield f
     o.STAGES.clear()
     o.STAGES.extend(saved)
+
+
+@pytest.fixture
+def hashing(monkeypatch):
+    """Use the deterministic test embedder (no network, no consent needed) and the local vector store."""
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "embedding_provider", "hashing")
+    yield
