@@ -5,6 +5,9 @@ os.environ.update(
     APP_SECRET_KEY="test-secret-key-test-secret-key-test-secret-key",
     MONGODB_DB="documind_test",
     EMAIL_BACKEND="log",
+    MAX_UPLOAD_MB="1",
+    LOCAL_STORAGE_DIR=".local-data/test-objects",
+    JOB_BACKEND="inline",
 )
 
 import httpx  # noqa: E402
@@ -61,3 +64,48 @@ async def first_workspace(c: httpx.AsyncClient) -> dict:
     r = await c.get("/api/v1/workspaces")
     assert r.status_code == 200
     return r.json()[0]
+
+
+async def enable_ai(c: httpx.AsyncClient, ws_id: str) -> None:
+    r = await c.patch(
+        f"/api/v1/workspaces/{ws_id}", json={"settings": {"ai_processing_consent": True}}
+    )
+    assert r.status_code == 200
+
+
+@pytest.fixture
+def fake_stages():
+    """Replace the pipeline stages with controllable fakes; restores the originals afterwards."""
+    from app.modules.documents.states import DocumentStatus as S
+    from app.modules.ingestion import orchestrator as o
+
+    calls: list[str] = []
+
+    def make(name, status, fail=None):
+        async def run(ctx):
+            calls.append(name)
+            if fail and fail.get("times", 0) > 0:
+                fail["times"] -= 1
+                raise fail["exc"]
+
+        return o.Stage(name, status, run)
+
+    saved = list(o.STAGES)
+    o.STAGES.clear()
+
+    class Fakes:
+        pass
+
+    f = Fakes()
+    f.calls = calls
+    f.make = make
+    f.set = lambda *stages: (o.STAGES.clear(), o.STAGES.extend(stages))
+    f.default = lambda **fails: f.set(
+        make("extract", S.EXTRACTING, fails.get("extract")),
+        make("chunk", S.CHUNKING, fails.get("chunk")),
+        make("embed", S.EMBEDDING, fails.get("embed")),
+        make("index", S.INDEXING, fails.get("index")),
+    )
+    yield f
+    o.STAGES.clear()
+    o.STAGES.extend(saved)

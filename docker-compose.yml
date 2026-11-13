@@ -1,0 +1,104 @@
+# DocuMind AI: full stack.   Status: written but NOT yet verified on this machine (Docker not installed).
+#
+#   docker compose up -d redis minio minio-init          # infrastructure only (use with local API/worker)
+#   docker compose --profile app up -d --build           # everything
+#
+# MongoDB is intentionally external: use MongoDB Atlas (required for Vector Search) via MONGODB_URI in .env.
+
+x-backend-env: &backend-env
+  APP_ENV: production
+  APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in .env}
+  MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in .env}
+  MONGODB_DB: ${MONGODB_DB:-documind}
+  VECTOR_BACKEND: ${VECTOR_BACKEND:-atlas}
+  REDIS_URL: redis://redis:6379/0
+  JOB_BACKEND: celery
+  STORAGE_BACKEND: s3
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_BUCKET: ${S3_BUCKET:-documind}
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  TRUST_FORWARDED_FOR: "true"
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-smtp}
+  SMTP_HOST: ${SMTP_HOST:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio-data:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint: >
+      /bin/sh -c "mc alias set local http://minio:9000 $${S3_ACCESS_KEY_ID:-minioadmin} $${S3_SECRET_ACCESS_KEY:-minioadmin}
+      && mc mb --ignore-existing local/$${S3_BUCKET:-documind}
+      && mc anonymous set none local/$${S3_BUCKET:-documind}"
+    environment:
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-documind}
+
+  api:
+    profiles: [app]
+    build: ./backend
+    environment: *backend-env
+    depends_on:
+      redis: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+    ports: ["8000:8000"]
+
+  worker:
+    profiles: [app]
+    build: ./backend
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    environment: *backend-env
+    depends_on:
+      redis: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+
+  beat:
+    profiles: [app]
+    build: ./backend
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=INFO"]
+    environment: *backend-env
+    depends_on:
+      redis: { condition: service_healthy }
+
+  frontend:
+    profiles: [app]
+    build:
+      context: ./frontend
+      args:
+        BACKEND_INTERNAL_URL: http://api:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
+
+volumes:
+  redis-data:
+  minio-data:

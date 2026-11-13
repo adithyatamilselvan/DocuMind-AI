@@ -26,3 +26,19 @@ It is never selected automatically; the app logs which backend is active and
 
 `STORAGE_BACKEND=local` stores objects under `LOCAL_STORAGE_DIR` with random keys behind the same
 `ObjectStore` interface as S3. Production uses `s3`.
+
+# ADR-005: Background jobs (supersedes the sync-worker note in ADR-001 item 2)
+
+Status: accepted (Phase 6)
+
+- The pipeline is **async** (one implementation). Celery tasks call `asyncio.run(...)` and create their own
+  `AsyncMongoClient` per task, so there is no second sync data layer.
+- `JOB_BACKEND=celery` (Redis) is production. `JOB_BACKEND=inline` runs the same orchestrator as asyncio tasks in
+  the API process for development without Redis. Jobs are checkpointed per stage in `processing_jobs`,
+  so a re-run (retry, worker crash, recovery) skips completed stages.
+- `recover_stuck_jobs` re-enqueues jobs left running by a dead process (Celery beat every 5 min; at API start
+  for inline).
+- Hosted embeddings send document text to a third party, so **upload and retry are blocked until a workspace admin
+  grants `ai_processing_consent`** (when `EMBEDDING_PROVIDER` is not `local`).
+- Uploaded content type is decided from file CONTENT (PDF header, DOCX zip structure with zip-bomb limits, text
+  sniffing) and must match the extension. Object keys are server-generated; filenames are display-only.

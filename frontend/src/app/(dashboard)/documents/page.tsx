@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, FileText, Search, Tag, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Search, Tag, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -105,7 +105,17 @@ export default function DocumentsPage() {
 
   return (
     <>
-      <PageHeader title="Documents" description={list.data ? `${total} document${total === 1 ? "" : "s"}` : undefined} />
+      <PageHeader
+        title="Documents"
+        description={list.data ? `${total} document${total === 1 ? "" : "s"}` : undefined}
+        actions={
+          canEdit && (
+            <Button nativeButton={false} render={<Link href="/upload" />}>
+              <Upload className="size-4" aria-hidden /> Upload
+            </Button>
+          )
+        }
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1 sm:max-w-xs">
@@ -169,7 +179,8 @@ export default function DocumentsPage() {
         <EmptyState
           icon={FileText}
           title={filtered ? "No documents match your filters" : "No documents yet"}
-          description={filtered ? "Try a different search or clear the filters." : "Uploaded documents will appear here once processed."}
+          description={filtered ? "Try a different search or clear the filters." : "Upload PDF, DOCX or TXT files to get started."}
+          action={!filtered && canEdit ? <Button nativeButton={false} render={<Link href="/upload" />}>Upload documents</Button> : undefined}
         />
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card">

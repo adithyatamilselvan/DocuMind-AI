@@ -24,6 +24,8 @@ class SlidingWindowLimiter:
         self._hits: dict[str, deque[float]] = defaultdict(deque)
 
     def check(self, key: str, limit: int, window_s: int) -> None:
+        if not get_settings().rate_limit_enabled:
+            return
         now = time.monotonic()
         q = self._hits[key]
         while q and q[0] <= now - window_s:

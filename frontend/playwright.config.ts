@@ -25,6 +25,7 @@ export default defineConfig({
         APP_ENV: "test",
         APP_SECRET_KEY: "e2e-secret-key-e2e-secret-key-e2e-secret-key",
         MONGODB_DB: "documind_e2e",
+        RATE_LIMIT_ENABLED: "false",
         FRONTEND_URL: `http://localhost:${FRONTEND}`,
       },
     },

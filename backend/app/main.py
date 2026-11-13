@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from datetime import timedelta
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,9 @@ from app.core.email import build_email_sender
 from app.core.errors import install_error_handlers
 from app.core.indexes import ensure_indexes
 from app.middleware.request_id import RequestIdMiddleware
+from app.modules.ingestion.queue import build_queue, recover_stuck_jobs
+from app.modules.ingestion.stages import register_default_stages
+from app.storage.factory import build_object_store
 
 log = logging.getLogger("documind")
 
@@ -23,8 +27,14 @@ async def lifespan(app: FastAPI):
     app.state.client = client
     app.state.db = client[settings.mongodb_db]
     app.state.email = build_email_sender(settings)
+    app.state.store = build_object_store(settings)
+    app.state.queue = build_queue(app.state.db, settings, app.state.store)
+    register_default_stages()
     await client.admin.command("ping")
     await ensure_indexes(app.state.db)
+    if settings.job_backend == "inline" and settings.env != "test":
+        # Inline jobs die with the process: pick up anything left unfinished.
+        await recover_stuck_jobs(app.state.db, app.state.queue, timedelta(seconds=0))
     log.info(
         "Started env=%s db=%s vector_backend=%s",
         settings.env,
@@ -34,6 +44,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        await app.state.queue.close()
         await client.close()
 
 

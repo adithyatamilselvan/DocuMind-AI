@@ -1,13 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, RotateCw, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { StatusBadge } from "@/components/documents/status-badge";
+import { StatusBadge, isInProgress } from "@/components/documents/status-badge";
 import { PageHeader } from "@/components/page-header";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -21,8 +21,10 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentWorkspace } from "@/hooks/use-session";
 import { errorMessage } from "@/lib/api";
+import { Progress } from "@/components/ui/progress";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { documentService } from "@/services/documents";
+import { uploadService } from "@/services/uploads";
 import { atLeast } from "@/types";
 
 export default function DocumentDetailPage() {
@@ -37,6 +39,37 @@ export default function DocumentDetailPage() {
     queryKey: ["document", ws, id],
     queryFn: () => documentService.get(ws!, id),
     enabled: !!ws,
+    refetchInterval: (q) => (q.state.data && isInProgress(q.state.data.status) ? 2000 : false),
+  });
+  const processing = useQuery({
+    queryKey: ["processing", ws, id, doc.data?.status],
+    queryFn: () => uploadService.processing(ws!, id),
+    enabled: !!ws && !!doc.data,
+    refetchInterval: doc.data && isInProgress(doc.data.status) ? 2000 : false,
+  });
+  const versions = useQuery({
+    queryKey: ["versions", ws, id, doc.data?.version_count],
+    queryFn: () => uploadService.versions(ws!, id),
+    enabled: !!ws && !!doc.data,
+  });
+  const fileInput = useRef<HTMLInputElement>(null);
+  const retry = useMutation({
+    mutationFn: () => uploadService.retry(ws!, id),
+    onSuccess: () => {
+      toast.success("Processing restarted");
+      qc.invalidateQueries({ queryKey: ["document", ws, id] });
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const newVersion = useMutation({
+    mutationFn: (file: File) => uploadService.uploadVersion(ws!, id, file),
+    onSuccess: (r) => {
+      if (r.outcome === "created") toast.success("New version uploaded");
+      else toast.info(r.error ?? "Nothing to upload");
+      qc.invalidateQueries({ queryKey: ["document", ws, id] });
+      qc.invalidateQueries({ queryKey: ["documents", ws] });
+    },
+    onError: (e) => toast.error(errorMessage(e)),
   });
   const collections = useQuery({
     queryKey: ["collections", ws],
@@ -88,7 +121,16 @@ export default function DocumentDetailPage() {
         title={d.title}
         description={d.filename}
         actions={
-          canEdit && (
+          <>
+            <Button variant="outline" size="sm" nativeButton={false} render={<a href={uploadService.downloadUrl(ws!, id)} download />}>
+              <Download className="size-3.5" aria-hidden /> Download
+            </Button>
+            {canEdit && d.status === "FAILED" && (
+              <Button variant="outline" size="sm" disabled={retry.isPending} onClick={() => retry.mutate()}>
+                <RotateCw className="size-3.5" aria-hidden /> Retry processing
+              </Button>
+            )}
+            {canEdit && (
             <AlertDialog>
               <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
                 <Trash2 className="size-3.5" aria-hidden /> Delete
@@ -104,7 +146,8 @@ export default function DocumentDetailPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          )
+            )}
+          </>
         }
       />
       <div className="grid gap-6 lg:grid-cols-3">
@@ -187,6 +230,57 @@ export default function DocumentDetailPage() {
             {d.tags.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-1">{d.tags.map((t) => <Badge key={t} variant="secondary">{t}</Badge>)}</div>
             )}
+          </CardContent>
+        </Card>
+
+        {isInProgress(d.status) && processing.data && (
+          <Card className="lg:col-span-3">
+            <CardHeader><CardTitle>Processing</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              <Progress value={Math.round(processing.data.progress * 100)} aria-label="Processing progress" />
+              <p className="text-xs text-muted-foreground">
+                {Object.keys(processing.data.stages).length} stage(s) finished
+                {processing.data.attempts > 1 && ` · attempt ${processing.data.attempts}`}
+                {processing.data.state === "retrying" && " · retrying after a temporary error"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="lg:col-span-3">
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Versions</CardTitle>
+            {canEdit && (
+              <>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  className="sr-only"
+                  aria-label="Upload a new version"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) newVersion.mutate(f);
+                    e.target.value = "";
+                  }}
+                />
+                <Button size="sm" variant="outline" disabled={newVersion.isPending || isInProgress(d.status)} onClick={() => fileInput.current?.click()}>
+                  <Upload className="size-3.5" aria-hidden /> Upload new version
+                </Button>
+              </>
+            )}
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y text-sm">
+              {versions.data?.map((v) => (
+                <li key={v.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
+                  <span className="font-medium">v{v.version_no}</span>
+                  {v.is_current && <Badge variant="secondary">Current</Badge>}
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">{v.filename} · {formatBytes(v.size_bytes)} · {formatDateTime(v.created_at)}</span>
+                  <a className="text-primary hover:underline" href={uploadService.downloadUrl(ws!, id, { version: v.id })} download>Download</a>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       </div>

@@ -1,4 +1,4 @@
-import { FileText, LayoutDashboard, type LucideIcon, Settings, Users } from "lucide-react";
+import { FileText, LayoutDashboard, type LucideIcon, Settings, Upload, Users } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; items: NavItem[] };
@@ -11,7 +11,10 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Library",
-    items: [{ href: "/documents", label: "Documents", icon: FileText }],
+    items: [
+      { href: "/documents", label: "Documents", icon: FileText },
+      { href: "/upload", label: "Upload", icon: Upload },
+    ],
   },
   {
     label: "Administration",

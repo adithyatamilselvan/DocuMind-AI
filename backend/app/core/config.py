@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=list, alias="CORS_ORIGINS")
     frontend_url: str = Field("http://localhost:3000", alias="FRONTEND_URL")
 
+    # Disable only for automated end-to-end runs where every test registers from one IP.
+    rate_limit_enabled: bool = Field(True, alias="RATE_LIMIT_ENABLED")
+
     # Set true only when running behind a trusted reverse proxy (Next.js rewrite / nginx)
     trust_forwarded_for: bool = Field(False, alias="TRUST_FORWARDED_FOR")
     email_backend: Literal["log", "smtp"] = Field("log", alias="EMAIL_BACKEND")
@@ -41,6 +44,25 @@ class Settings(BaseSettings):
 
     # Uploads
     max_upload_mb: int = Field(50, alias="MAX_UPLOAD_MB")
+    max_files_per_upload: int = Field(20, alias="MAX_FILES_PER_UPLOAD")
+
+    # Object storage
+    storage_backend: Literal["local", "s3"] = Field("local", alias="STORAGE_BACKEND")
+    local_storage_dir: str = Field(".local-data/objects", alias="LOCAL_STORAGE_DIR")
+    s3_endpoint_url: str = Field("", alias="S3_ENDPOINT_URL")
+    s3_region: str = Field("us-east-1", alias="S3_REGION")
+    s3_bucket: str = Field("documind", alias="S3_BUCKET")
+    s3_access_key_id: str = Field("", alias="S3_ACCESS_KEY_ID")
+    s3_secret_access_key: SecretStr = Field(SecretStr(""), alias="S3_SECRET_ACCESS_KEY")
+
+    # AI providers (server-side only). Embeddings default to a hosted API; "local" = sentence-transformers.
+    embedding_provider: Literal["openai", "local"] = Field("openai", alias="EMBEDDING_PROVIDER")
+
+    # Background jobs. "celery" needs Redis + a worker; "inline" runs jobs inside the API
+    # process (development without Redis only; jobs do not survive API restarts except via recovery).
+    job_backend: Literal["celery", "inline"] = Field("inline", alias="JOB_BACKEND")
+    redis_url: str = Field("redis://localhost:6379/0", alias="REDIS_URL")
+    job_max_attempts: int = Field(3, alias="JOB_MAX_ATTEMPTS")
 
     @field_validator("cors_origins", mode="before")
     @classmethod

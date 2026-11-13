@@ -10,6 +10,11 @@ export type DocumentStatus = DocumentItem["status"];
 export type DocumentPage = S["Page_DocumentOut_"];
 export type Collection = S["CollectionOut"];
 export type Overview = S["Overview"];
+export type UploadResult = S["UploadResultOut"];
+export type UploadResponse = S["UploadOut"];
+export type VersionItem = S["VersionOut"];
+export type ProcessingInfo = S["ProcessingOut"];
+export type ClientConfig = S["ClientConfig"];
 
 export const ROLE_RANK: Record<Role, number> = { viewer: 1, editor: 2, admin: 3, owner: 4 };
 export const atLeast = (role: Role | undefined, min: Role) =>

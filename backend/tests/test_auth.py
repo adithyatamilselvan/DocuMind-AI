@@ -154,3 +154,12 @@ async def test_change_password_revokes_other_sessions(client, new_client):
         assert r.status_code == 204
         assert (await other.get("/api/v1/auth/me")).status_code == 401
         assert (await client.get("/api/v1/auth/me")).status_code == 200
+
+
+async def test_client_config_requires_auth_and_exposes_no_secrets(client):
+    assert (await client.get("/api/v1/system/config")).status_code == 401
+    await register(client)
+    body = (await client.get("/api/v1/system/config")).json()
+    assert set(body) == {
+        "max_upload_mb", "max_files_per_upload", "allowed_extensions", "external_ai_processing",
+    }  # fmt: skip

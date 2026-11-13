@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -59,6 +60,7 @@ export default function SettingsPage() {
     onError: (e) => pw.setError("root", { message: errorMessage(e) }),
   });
 
+  const [pendingConsent, setPendingConsent] = useState<boolean | null>(null);
   const consent = useMutation({
     mutationFn: (value: boolean) =>
       workspaceService.update(workspace!.id, { settings: { ai_processing_consent: value } }),
@@ -67,6 +69,7 @@ export default function SettingsPage() {
       qc.invalidateQueries({ queryKey: keys.workspaces });
     },
     onError: (e) => toast.error(errorMessage(e)),
+    onSettled: () => setPendingConsent(null),
   });
 
   if (!user) return <Skeleton className="h-64" />;
@@ -149,9 +152,12 @@ export default function SettingsPage() {
                 <input
                   type="checkbox"
                   className="mt-0.5 size-4 accent-[var(--primary)]"
-                  checked={consented}
+                  checked={pendingConsent ?? consented}
                   disabled={!isAdmin || consent.isPending}
-                  onChange={(e) => consent.mutate(e.target.checked)}
+                  onChange={(e) => {
+                    setPendingConsent(e.target.checked);
+                    consent.mutate(e.target.checked);
+                  }}
                 />
                 <span>
                   Allow external AI processing of document content in this workspace
