@@ -69,6 +69,25 @@ class Settings(BaseSettings):
     ai_timeout_s: float = Field(60.0, alias="AI_TIMEOUT_S")
     local_scan_limit: int = Field(20000, alias="LOCAL_VECTOR_SCAN_LIMIT")
 
+    # LLM. "fake" is a deterministic extractive stand-in for tests/offline demos (blocked in production).
+    llm_provider: Literal["anthropic", "fake"] = Field("anthropic", alias="LLM_PROVIDER")
+    anthropic_api_key: SecretStr = Field(SecretStr(""), alias="ANTHROPIC_API_KEY")
+    anthropic_model: str = Field("claude-opus-5-5", alias="ANTHROPIC_MODEL")
+    llm_effort: Literal["low", "medium", "high", "xhigh", "max"] = Field(
+        "medium", alias="LLM_EFFORT"
+    )
+    llm_max_tokens: int = Field(4096, alias="LLM_MAX_TOKENS")
+
+    # RAG
+    reranker: Literal["lexical", "cross_encoder", "none"] = Field("lexical", alias="RERANKER")
+    reranker_model: str = Field("BAAI/bge-reranker-v2-m3", alias="RERANKER_MODEL")
+    rag_top_k: int = Field(8, alias="RAG_TOP_K")
+    rag_candidates: int = Field(30, alias="RAG_CANDIDATES")
+    rag_context_tokens: int = Field(6000, alias="RAG_CONTEXT_TOKENS")
+    rag_min_vector_score: float = Field(0.2, alias="RAG_MIN_VECTOR_SCORE")
+    rag_multi_query: bool = Field(True, alias="RAG_MULTI_QUERY")
+    rag_history_turns: int = Field(6, alias="RAG_HISTORY_TURNS")
+
     # Extraction / OCR
     ocr_enabled: bool = Field(True, alias="OCR_ENABLED")
     tesseract_cmd: str = Field("tesseract", alias="TESSERACT_CMD")
@@ -93,6 +112,15 @@ class Settings(BaseSettings):
     def embeds_externally(self) -> bool:
         """True when document text is sent to a third-party service for embedding."""
         return self.embedding_provider == "openai"
+
+    @property
+    def ai_external(self) -> bool:
+        """True when document text can be sent to any third-party AI service (embeddings or LLM)."""
+        return self.embeds_externally or self.llm_external
+
+    @property
+    def llm_external(self) -> bool:
+        return self.llm_provider == "anthropic"
 
     @property
     def max_upload_bytes(self) -> int:

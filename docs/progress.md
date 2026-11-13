@@ -31,10 +31,18 @@
   (Atlas $vectorSearch/$search + local dev scan/$text), chunk/embed/index stages (resumable, only-missing embedding,
   index verified before chunks become searchable, old versions replaced), usage records, /health/ready,
   scripts/verify_indexes.py (Atlas create/verify/smoke). Atlas paths verified only by captured-pipeline tests (no cluster).
-- [ ] Phases 9-19: not started
+- [x] Phase 9: LLM provider abstraction (official `anthropic` SDK, default model claude-opus-5-5, typed output via
+  messages.parse, no removed sampling params; ExtractiveFakeLLM test-only), query understanding (QueryPlan),
+  permission-resolving scope, hybrid retrieval (vector+keyword x multi-query -> RRF -> threshold -> near-dup removal
+  -> rerank [lexical default, cross-encoder optional]), context selection, injection-escaped prompts,
+  citation validation (ids/pages only from retrieved chunks, fabricated ids removed, unverified quotes un-quoted,
+  uncited/ungrounded answers withheld), /ask and /search endpoints, retrieval eval harness (evals/).
+  Retrieval metrics on sample corpus (hashing embedder): keyword/hybrid R@3=1.00 MRR=1.00; semantic-only 0.67
+  (test embedder is lexical). NOT measured: real-model semantic quality, live Claude faithfulness (needs keys).
+- [ ] Phases 10-19: not started
 
 ## Test results (observed)
-- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 94 passed, 1 skipped (adds chunking/embeddings/indexing; skipped = real Tesseract)
+- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 134 passed, 1 skipped (adds RAG units/API, retrieval eval; skipped = real Tesseract)
 - Ruff clean.
 - Frontend (run in PowerShell, NOT Git Bash: npm scripts fail to find `node` there):
   `npx vitest run` -> 14 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
@@ -48,7 +56,7 @@
 - Workspace delete is soft; purge job comes with documents (Phase 6+).
 
 ## Next steps
-Phase 9: LLM provider abstraction (Anthropic real client + test-only fake), query understanding/rewrite, hybrid RRF retrieval, reranker interface, context selection, citation validation, RAG service. Needs ANTHROPIC_API_KEY for live runs (mocked until then).
+Phase 10: conversations/messages collections + API, SSE streaming endpoint, chat UI with interactive citations, PDF viewer highlight. Set ANTHROPIC_API_KEY + OPENAI_API_KEY for live use.
 
 ## Windows notes
 - Use PowerShell for npm/npx. Git Bash cannot launch Node subprocesses spawned via cmd.

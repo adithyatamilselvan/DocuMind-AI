@@ -7,6 +7,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.collections.router import router as collections_router
 from app.modules.documents.router import router as documents_router
 from app.modules.documents.transfer_router import router as transfer_router
+from app.modules.rag.router import router as rag_router
 from app.modules.users.router import router as users_router
 from app.modules.workspaces.router import router as workspaces_router
 
@@ -19,3 +20,4 @@ api_router.include_router(documents_router)
 api_router.include_router(collections_router)
 api_router.include_router(analytics_router)
 api_router.include_router(system_router)
+api_router.include_router(rag_router)

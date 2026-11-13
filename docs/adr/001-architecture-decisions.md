@@ -42,3 +42,16 @@ Status: accepted (Phase 6)
   grants `ai_processing_consent`** (when `EMBEDDING_PROVIDER` is not `local`).
 - Uploaded content type is decided from file CONTENT (PDF header, DOCX zip structure with zip-bomb limits, text
   sniffing) and must match the extension. Object keys are server-generated; filenames are display-only.
+
+# ADR-006: RAG grounding and citation integrity (Phase 9)
+
+- The model sees only opaque ids (S1..Sn). Document title, page, passage and chunk id in every citation come from the
+  stored retrieved chunk. Ids not in the retrieved set are removed; page numbers written in model text are ignored.
+- Quotations must appear verbatim (whitespace/quote-normalised, ellipsis-aware) in a retrieved source; otherwise the
+  quotation marks are removed and a warning is attached.
+- An answer with zero valid citations is withheld and replaced by the insufficient-evidence reply. No retrieved
+  evidence means the LLM is not called at all.
+- Anthropic via the official SDK; default `claude-opus-5-5` (override with ANTHROPIC_MODEL), adaptive thinking is the
+  model default, `output_config.effort` from LLM_EFFORT, never temperature/top_p/top_k.
+- Hosted-first: embeddings default to OpenAI; local bge-m3 stays behind the same interface and is never selected
+  silently. Rerank default is a deterministic BM25+RRF blend; a cross-encoder is opt-in.
