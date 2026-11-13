@@ -15,14 +15,17 @@
   auth pages (login/register/forgot/reset/verify), collapsible sidebar + mobile sheet nav, workspace switcher,
   Dashboard (workspace overview only; real document metrics arrive in Phase 5/16), Workspace members page, Settings
   (profile, theme, password, AI-processing consent)
-- [ ] Phases 5-19: not started
+- [x] Phase 5: documents module (list/filter/sort/paginate, patch, bulk, soft-delete + immediate chunk/insight purge,
+  validated status state machine), collections (tree, counts), analytics overview (all real queries), frontend
+  dashboard (KPIs, usage chart, categories, top docs, activity), document library + detail pages
+- [ ] Phases 6-19: not started
 
 ## Test results (observed)
-- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 18 passed (auth, CSRF, rate limit, tenant isolation, RBAC)
+- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 30 passed (auth, CSRF, rate limit, tenant isolation, RBAC, documents, collections, analytics)
 - Ruff clean.
 - Frontend (run in PowerShell, NOT Git Bash: npm scripts fail to find `node` there):
-  `npx vitest run` -> 12 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
-  `npx playwright test` -> 8 passed (auth flow, validation, settings; desktop Chrome + Pixel 7 viewport,
+  `npx vitest run` -> 14 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
+  `npx playwright test` -> 14 passed (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
   includes a no-horizontal-overflow assertion). E2E uses DB `documind_e2e`, ports 8100/3100.
 
 ## Known limitations
@@ -32,8 +35,11 @@
 - Workspace delete is soft; purge job comes with documents (Phase 6+).
 
 ## Next steps
-Phase 5: dashboard metrics endpoint + document library (list/search/filter/sort/paginate, collections, tags). Then Phase 6 upload.
+Phase 6: upload, object storage, job queue/orchestrator. Library rows are not e2e-tested until upload exists.
 
 ## Windows notes
 - Use PowerShell for npm/npx. Git Bash cannot launch Node subprocesses spawned via cmd.
 - `.env` at repo root is gitignored; backend reads `../.env`. Create from `.env.example`.
+
+## PyMongo async gotcha
+`collection.aggregate()` is a coroutine returning a cursor: use `async for x in await coll.aggregate(...)`. `find()` is not.

@@ -20,7 +20,7 @@ test("register, navigate, sign out and sign in again", async ({ page }, info) =>
 
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: "Welcome, Ada" })).toBeVisible();
-  await expect(page.getByText("owner", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Overview of Ada Lovelace's workspace")).toBeVisible();
 
   // No horizontal overflow at this viewport.
   const overflow = await page.evaluate(

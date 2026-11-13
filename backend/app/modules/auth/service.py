@@ -45,7 +45,7 @@ async def send_verification(
 
 async def register(
     db: AsyncDatabase, settings: Settings, sender: EmailSender, email: str, password: str, name: str
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, Any]]:
     now = utcnow()
     user: dict[str, Any] = {
         "email": email.lower(),
@@ -61,9 +61,9 @@ async def register(
         user["_id"] = (await db.users.insert_one(user)).inserted_id
     except DuplicateKeyError:
         raise conflict("An account with this email already exists", "email_taken") from None
-    await ws_service.create_workspace(db, user["_id"], f"{name}'s workspace")
+    workspace = await ws_service.create_workspace(db, user["_id"], f"{name}'s workspace")
     await send_verification(db, settings, sender, user)
-    return user
+    return user, workspace
 
 
 async def authenticate(db: AsyncDatabase, email: str, password: str) -> dict[str, Any]:

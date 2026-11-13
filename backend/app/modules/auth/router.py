@@ -58,14 +58,17 @@ def _clear_cookies(response: Response, settings: Settings) -> None:
 async def register(
     body: RegisterIn, request: Request, response: Response, db: DB, settings: SettingsDep
 ):
-    user = await service.register(
+    user, workspace = await service.register(
         db, settings, request.app.state.email, body.email, body.password, body.name
     )
     token = await service.create_session(
         db, settings, user["_id"], client_ip(request), request.headers.get("user-agent")
     )
     _set_cookies(response, settings, token)
-    await audit.record(db, action="auth.register", actor_id=user["_id"], ip=client_ip(request))
+    await audit.record(
+        db, action="auth.register", actor_id=user["_id"], workspace_id=workspace["_id"],
+        ip=client_ip(request),
+    )  # fmt: skip
     return UserOut.from_doc(user)
 
 
