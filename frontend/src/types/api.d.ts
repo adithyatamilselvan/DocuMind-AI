@@ -621,6 +621,10 @@ export interface components {
             version_count: number;
             /** Access Count */
             access_count: number;
+            /** Extraction */
+            extraction?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Created At
              * Format: date-time

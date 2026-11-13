@@ -37,6 +37,7 @@ class DocumentOut(BaseModel):
     language: str | None = None
     version_count: int
     access_count: int
+    extraction: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -48,7 +49,8 @@ class DocumentOut(BaseModel):
             error=d.get("error"), category=d.get("category"), tags=d.get("tags", []),
             collection_ids=d.get("collection_ids", []), page_count=d.get("page_count"),
             language=d.get("language"), version_count=d.get("version_count", 1),
-            access_count=d.get("access_count", 0), created_at=d["created_at"],
+            access_count=d.get("access_count", 0), extraction=d.get("extraction"),
+            created_at=d["created_at"],
             updated_at=d["updated_at"],
         )  # fmt: skip
 

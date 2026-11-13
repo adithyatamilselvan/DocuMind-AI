@@ -2184,6 +2184,18 @@
             "type": "integer",
             "title": "Access Count"
           },
+          "extraction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",

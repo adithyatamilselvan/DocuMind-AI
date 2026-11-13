@@ -19,27 +19,15 @@ from app.core.config import Settings
 from app.core.ids import utcnow
 from app.modules.documents import service as documents
 from app.modules.documents.states import DocumentStatus
+from app.modules.ingestion.errors import (
+    DocumentGone,
+    PermanentError,
+    RetryableError,
+    RetryLater,
+)
 from app.storage.base import ObjectStore
 
 log = logging.getLogger("documind.ingestion")
-
-
-class PermanentError(Exception):
-    """Unrecoverable (corrupt/encrypted file...). The message is shown to the user."""
-
-
-class RetryableError(Exception):
-    """Transient failure (provider timeout, network)."""
-
-
-class RetryLater(Exception):  # noqa: N818
-    def __init__(self, countdown: int) -> None:
-        super().__init__(f"retry in {countdown}s")
-        self.countdown = countdown
-
-
-class DocumentGone(Exception):  # noqa: N818
-    """Document was deleted while processing."""
 
 
 @dataclass
@@ -211,3 +199,6 @@ async def _enter_for_resume(ctx: StageContext, status: DocumentStatus) -> None:
         )
         return
     raise PermanentError(f"Illegal status transition {current} -> {status}")
+
+
+__all__ = ["DocumentGone", "PermanentError", "RetryLater", "RetryableError"]

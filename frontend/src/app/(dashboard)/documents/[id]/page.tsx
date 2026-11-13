@@ -221,7 +221,17 @@ export default function DocumentDetailPage() {
               {d.error && (<><dt className="text-muted-foreground">Error</dt><dd className="text-destructive">{d.error}</dd></>)}
               <dt className="text-muted-foreground">Type</dt><dd className="break-all">{d.mime_type}</dd>
               <dt className="text-muted-foreground">Size</dt><dd>{formatBytes(d.size_bytes)}</dd>
-              <dt className="text-muted-foreground">Pages</dt><dd>{d.page_count ?? "—"}</dd>
+              <dt className="text-muted-foreground">Pages</dt>
+              <dd>
+                {d.page_count ?? "—"}
+                {d.extraction?.page_basis === "virtual" && <span className="text-xs text-muted-foreground"> (approximate, no fixed pages)</span>}
+              </dd>
+              {Array.isArray(d.extraction?.ocr_pages) && d.extraction.ocr_pages.length > 0 && (
+                <><dt className="text-muted-foreground">OCR</dt><dd>{d.extraction.ocr_pages.length} scanned page(s)</dd></>
+              )}
+              {Array.isArray(d.extraction?.warnings) && d.extraction.warnings.length > 0 && (
+                <><dt className="text-muted-foreground">Notes</dt><dd className="text-warning">{(d.extraction.warnings as string[]).join(" ")}</dd></>
+              )}
               <dt className="text-muted-foreground">Language</dt><dd>{d.language ?? "—"}</dd>
               <dt className="text-muted-foreground">Versions</dt><dd>{d.version_count}</dd>
               <dt className="text-muted-foreground">Added</dt><dd>{formatDateTime(d.created_at)}</dd>

@@ -18,10 +18,18 @@
 - [x] Phase 5: documents module (list/filter/sort/paginate, patch, bulk, soft-delete + immediate chunk/insight purge,
   validated status state machine), collections (tree, counts), analytics overview (all real queries), frontend
   dashboard (KPIs, usage chart, categories, top docs, activity), document library + detail pages
-- [ ] Phases 6-19: not started
+- [x] Phase 6: upload (multi-file, streaming spool, size limit, SHA-256 dedupe, content sniffing, zip-bomb guard,
+  sanitized names, server-generated keys), local+S3 object stores, versions, download, retry, AI-consent gate,
+  ingestion orchestrator (checkpointed, validated transitions, retry/backoff, recovery), inline + Celery queues,
+  upload workspace UI with progress, Dockerfiles + docker-compose (UNVERIFIED: Docker not installed here)
+- [x] Phase 7: extraction: PDF (PyMuPDF: reading order, font-based headings, tables, header/footer removal, scanned-page
+  detection + Tesseract OCR interface), DOCX (headings, tables, virtual pages), TXT (encoding detection, md headings),
+  normalization, language detection, extracted.json stored in object store. Real Tesseract test is skipped locally
+  (binary not installed); OCR logic is tested with a fake engine on real rendered page images.
+- [ ] Phases 8-19: not started
 
 ## Test results (observed)
-- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 30 passed (auth, CSRF, rate limit, tenant isolation, RBAC, documents, collections, analytics)
+- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 67 passed, 1 skipped (adds upload/validation/orchestrator/extraction; skipped = real Tesseract)
 - Ruff clean.
 - Frontend (run in PowerShell, NOT Git Bash: npm scripts fail to find `node` there):
   `npx vitest run` -> 14 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
@@ -35,7 +43,7 @@
 - Workspace delete is soft; purge job comes with documents (Phase 6+).
 
 ## Next steps
-Phase 6: upload, object storage, job queue/orchestrator. Library rows are not e2e-tested until upload exists.
+Phase 8: chunking, EmbeddingProvider (openai hosted default; local bge-m3 behind same interface; hashing provider for tests only), vector store (atlas + local), chunk/embed/index stages. NOTE: until Phase 8 stages exist, real uploads end FAILED at the final transition (orchestrator needs INDEXING->COMPLETED).
 
 ## Windows notes
 - Use PowerShell for npm/npx. Git Bash cannot launch Node subprocesses spawned via cmd.

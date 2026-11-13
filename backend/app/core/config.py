@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     # AI providers (server-side only). Embeddings default to a hosted API; "local" = sentence-transformers.
     embedding_provider: Literal["openai", "local"] = Field("openai", alias="EMBEDDING_PROVIDER")
 
+    # Extraction / OCR
+    ocr_enabled: bool = Field(True, alias="OCR_ENABLED")
+    tesseract_cmd: str = Field("tesseract", alias="TESSERACT_CMD")
+    ocr_langs: str = Field("eng", alias="OCR_LANGS")
+    ocr_max_pages: int = Field(200, alias="OCR_MAX_PAGES")
+    max_pages_per_document: int = Field(2000, alias="MAX_PAGES_PER_DOCUMENT")
+
     # Background jobs. "celery" needs Redis + a worker; "inline" runs jobs inside the API
     # process (development without Redis only; jobs do not survive API restarts except via recovery).
     job_backend: Literal["celery", "inline"] = Field("inline", alias="JOB_BACKEND")
