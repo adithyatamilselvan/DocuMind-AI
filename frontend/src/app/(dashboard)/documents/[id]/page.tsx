@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { InsightsPanel } from "@/components/documents/insights-panel";
 import { StatusBadge, isInProgress } from "@/components/documents/status-badge";
 import { PageHeader } from "@/components/page-header";
 import {
@@ -246,6 +247,8 @@ export default function DocumentDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {d.status === "COMPLETED" && ws && <InsightsPanel workspaceId={ws} documentId={id} canEdit={canEdit} />}
 
         {isInProgress(d.status) && processing.data && (
           <Card className="lg:col-span-3">

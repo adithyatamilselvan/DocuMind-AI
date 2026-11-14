@@ -19,6 +19,7 @@ import { useDebounced } from "@/hooks/use-debounced";
 import { useCurrentWorkspace } from "@/hooks/use-session";
 import { errorMessage } from "@/lib/api";
 import { chatService, type StreamHandlers } from "@/services/chat";
+import { insightsService } from "@/services/insights";
 import { uploadService } from "@/services/uploads";
 import { atLeast, type Citation } from "@/types";
 
@@ -43,6 +44,7 @@ function Assistant() {
   const abort = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
+  const suggestions = useQuery({ queryKey: ["suggestions", ws], queryFn: () => insightsService.suggestions(ws!), enabled: !!ws && !activeId });
   const convs = useQuery({ queryKey: ["conversations", ws, q], queryFn: () => chatService.list(ws!, q || undefined), enabled: !!ws });
   const detail = useQuery({
     queryKey: ["conversation", ws, activeId],
@@ -191,6 +193,15 @@ function Assistant() {
                 <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
                   Answers are written only from your documents and every claim links to its source passage. Use the scope button to focus on specific documents.
                 </p>
+                {(suggestions.data?.length ?? 0) > 0 && (
+                  <div className="mx-auto mt-6 flex max-w-xl flex-col gap-2" aria-label="Suggested questions">
+                    {suggestions.data!.map((s) => (
+                      <button key={s} type="button" onClick={() => void ask(s)} className="rounded-lg border bg-card px-4 py-2.5 text-left text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {messages.map((m, i) =>

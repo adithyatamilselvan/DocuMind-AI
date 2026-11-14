@@ -40,7 +40,9 @@ class InlineQueue:
         async with self._sem:
             while True:
                 try:
-                    await run_job(self._db, self._settings, self._store, job_id)
+                    follow = await run_job(self._db, self._settings, self._store, job_id)
+                    if follow:
+                        await self.enqueue(follow)
                     return
                 except RetryLater as r:
                     await asyncio.sleep(r.countdown)

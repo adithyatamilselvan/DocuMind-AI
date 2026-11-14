@@ -107,7 +107,27 @@ async def run_job(
     store: ObjectStore,
     job_id: ObjectId,
     stages: list[Stage] | None = None,
-) -> None:
+) -> ObjectId | None:
+    """Run one job. Returns the id of a follow-up job the caller must enqueue (or None)."""
+    head = await db.processing_jobs.find_one({"_id": job_id}, {"type": 1, "attempts": 1})
+    if head and head.get("type") == "insights":
+        from app.modules.insights.service import run_insights_job
+
+        try:
+            await run_insights_job(db, settings, store, job_id)
+        except RetryableError as e:
+            raise RetryLater(countdown=min(300, 10 * (head["attempts"] + 1))) from e
+        return None
+    return await _run_ingest(db, settings, store, job_id, stages)
+
+
+async def _run_ingest(
+    db: AsyncDatabase,
+    settings: Settings,
+    store: ObjectStore,
+    job_id: ObjectId,
+    stages: list[Stage] | None = None,
+) -> ObjectId | None:
     stages = STAGES if stages is None else stages
     job = await db.processing_jobs.find_one({"_id": job_id})
     if not job or job["state"] in {"completed", "failed"}:
@@ -160,6 +180,13 @@ async def run_job(
             {"_id": job_id},
             {"$set": {"state": "completed", "progress": 1.0, "updated_at": utcnow()}},
         )
+        if settings.insights_enabled:
+            from app.modules.insights.service import create_insights_job
+
+            follow = await create_insights_job(
+                db, document["workspace_id"], document["_id"], version["_id"]
+            )
+            return follow["_id"]
     except DocumentGone:
         await _purge_version_chunks(db, version["_id"])
         await db.processing_jobs.update_one(

@@ -21,6 +21,8 @@ export type ChatMessage = S["MessageOut"];
 export type Citation = S["CitationOut"];
 export type Scope = S["Filters"];
 export type DocumentText = S["DocumentTextOut"];
+export type InsightsOut = S["InsightsOut"];
+export type InsightSummary = S["InsightSummary"];
 
 export const ROLE_RANK: Record<Role, number> = { viewer: 1, editor: 2, admin: 3, owner: 4 };
 export const atLeast = (role: Role | undefined, min: Role) =>

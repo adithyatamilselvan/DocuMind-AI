@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     rag_history_turns: int = Field(6, alias="RAG_HISTORY_TURNS")
     llm_concurrency: int = Field(8, alias="LLM_CONCURRENCY")
 
+    # Document intelligence (insights run as a separate background job after ingestion completes)
+    insights_enabled: bool = Field(True, alias="INSIGHTS_ENABLED")
+    insights_max_direct_chars: int = Field(70_000, alias="INSIGHTS_MAX_DIRECT_CHARS")
+    insights_window_chars: int = Field(50_000, alias="INSIGHTS_WINDOW_CHARS")
+
     # Extraction / OCR
     ocr_enabled: bool = Field(True, alias="OCR_ENABLED")
     tesseract_cmd: str = Field("tesseract", alias="TESSERACT_CMD")
@@ -113,6 +118,10 @@ class Settings(BaseSettings):
     def embeds_externally(self) -> bool:
         """True when document text is sent to a third-party service for embedding."""
         return self.embedding_provider == "openai"
+
+    @property
+    def llm_configured(self) -> bool:
+        return self.llm_provider == "fake" or bool(self.anthropic_api_key.get_secret_value())
 
     @property
     def ai_external(self) -> bool:

@@ -207,7 +207,8 @@ async def retry_document(document_id: str, ctx: Editor, db: DB, queue: Queue, se
 async def processing_status(document_id: str, ctx: Viewer, db: DB):
     doc = await service.get_document(db, ctx.workspace_id, document_id)
     job = await db.processing_jobs.find_one(
-        {"document_id": doc["_id"], "workspace_id": ctx.workspace_id}, sort=[("created_at", -1)]
+        {"document_id": doc["_id"], "workspace_id": ctx.workspace_id, "type": {"$ne": "insights"}},
+        sort=[("created_at", -1)],
     )
     if not job:
         return None

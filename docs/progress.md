@@ -47,14 +47,19 @@
   citation-passage highlight in the text layer), text viewer for DOCX/TXT (virtual sections flagged approximate);
   `/documents/{id}/text` endpoint. Accessibility fix: links styled as buttons now use real <a> (LinkButton), because
   Base UI forces role="button" on `Button render={<Link/>}`.
-- [ ] Phases 11-19: not started
+- [x] Phase 11: document intelligence: async `insights` job after ingestion (map-reduce for long docs), Pydantic-typed
+  output (schema checked by SDK transform_schema; NOT verified against live API), evidence verification (quotes/pages
+  checked against extracted text, fabricated ones dropped), deterministic outline/table structure, stored in
+  `document_insights`, states none/pending/running/completed/failed/unavailable, regenerate, /insights list, /suggestions,
+  UI panel + overview page. ExtractiveFake provides deterministic insights offline.
+- [ ] Phases 12-19: not started
 
 ## Test results (observed)
-- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 145 passed, 1 skipped (adds chat/SSE/text endpoint; skipped = real Tesseract)
+- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 162 passed, 1 skipped (skipped = real Tesseract)
 - Ruff clean.
 - Frontend (run in PowerShell, NOT Git Bash: npm scripts fail to find `node` there):
   `npx vitest run` -> 28 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
-  `npx playwright test` -> 22 passed x2 runs (e2e backend uses EMBEDDING_PROVIDER=hashing + LLM_PROVIDER=fake; includes upload -> Ready, chat -> cited answer -> source panel -> highlighted PDF page, in-doc search, zoom, rename/delete, mobile) (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
+  `npx playwright test` -> 24 passed (e2e backend uses EMBEDDING_PROVIDER=hashing + LLM_PROVIDER=fake; includes upload -> Ready, chat -> cited answer -> source panel -> highlighted PDF page, in-doc search, zoom, rename/delete, mobile) (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
   includes a no-horizontal-overflow assertion). E2E uses DB `documind_e2e`, ports 8100/3100.
 
 ## Known limitations

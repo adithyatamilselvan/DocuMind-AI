@@ -17,9 +17,11 @@ async def _process(job_id: str) -> None:
     client = create_client(settings)  # per-task client: each task has its own event loop
     try:
         register_default_stages()
-        await run_job(
+        follow = await run_job(
             client[settings.mongodb_db], settings, build_object_store(settings), ObjectId(job_id)
         )
+        if follow:  # e.g. the insights job that follows a completed ingestion
+            await CeleryQueue().enqueue(follow)
     finally:
         await client.close()
 
