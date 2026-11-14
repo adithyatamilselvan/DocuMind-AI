@@ -24,7 +24,10 @@ async def test_security_headers_on_api_and_errors(client):
     for path in ("/health", "/api/v1/auth/me", "/nope"):
         r = await client.get(path)
         assert r.headers["x-content-type-options"] == "nosniff"
-        assert r.headers["x-frame-options"] == "DENY" and "camera=()" in r.headers["permissions-policy"]
+        assert (
+            r.headers["x-frame-options"] == "DENY"
+            and "camera=()" in r.headers["permissions-policy"]
+        )
         assert r.headers["referrer-policy"] == "strict-origin-when-cross-origin"
         assert "strict-transport-security" not in r.headers  # only when COOKIE_SECURE (HTTPS)
 
@@ -47,7 +50,9 @@ async def test_oversized_json_is_rejected_but_uploads_are_not_affected(client, a
     assert r.status_code == 413 and r.json()["error"]["code"] == "payload_too_large"
     ws = await first_workspace(client)
     await enable_ai(client, ws["id"])
-    up = await client.post(f"/api/v1/workspaces/{ws['id']}/documents/upload", files=files(("a.txt", TXT)))
+    up = await client.post(
+        f"/api/v1/workspaces/{ws['id']}/documents/upload", files=files(("a.txt", TXT))
+    )
     assert up.status_code == 200 and up.json()["results"][0]["outcome"] == "created"
 
 
@@ -111,8 +116,12 @@ async def test_rate_limit_dependency_uses_shared_limiter_when_configured(client,
     app.state.redis_limiter = RedisLimiter(FakeRedis())
     try:
         for _ in range(10):
-            await client.post("/api/v1/auth/login", json={"email": "x@example.com", "password": "bad-pass-1"})
-        r = await client.post("/api/v1/auth/login", json={"email": "x@example.com", "password": "bad-pass-1"})
+            await client.post(
+                "/api/v1/auth/login", json={"email": "x@example.com", "password": "bad-pass-1"}
+            )
+        r = await client.post(
+            "/api/v1/auth/login", json={"email": "x@example.com", "password": "bad-pass-1"}
+        )
         assert r.status_code == 429 and "retry-after" in r.headers
     finally:
         app.state.redis_limiter = None
@@ -137,7 +146,9 @@ class FakeClamd:
                 break
             data += await reader.readexactly(n)
         self.received = data
-        reply = self.reply or ("stream: Eicar-Test-Signature FOUND" if b"EICAR" in data else "stream: OK")
+        reply = self.reply or (
+            "stream: Eicar-Test-Signature FOUND" if b"EICAR" in data else "stream: OK"
+        )
         writer.write(reply.encode() + b"\0")
         await writer.drain()
         writer.close()
@@ -183,9 +194,15 @@ async def test_upload_rejects_infected_files_and_fails_closed(client, app, monke
     base = f"/api/v1/workspaces/{ws['id']}"
     async with FakeClamd() as srv:
         monkeypatch.setattr(s, "clamav_port", srv.port)
-        r = await client.post(f"{base}/documents/upload", files=files(("evil.txt", b"X5O!P%@AP EICAR test string"), ("fine.txt", TXT)))
+        r = await client.post(
+            f"{base}/documents/upload",
+            files=files(("evil.txt", b"X5O!P%@AP EICAR test string"), ("fine.txt", TXT)),
+        )
         out = {x["filename"]: x for x in r.json()["results"]}
-        assert out["evil.txt"]["outcome"] == "rejected" and out["evil.txt"]["error_code"] == "malware_detected"
+        assert (
+            out["evil.txt"]["outcome"] == "rejected"
+            and out["evil.txt"]["error_code"] == "malware_detected"
+        )
         assert out["fine.txt"]["outcome"] == "created"
     monkeypatch.setattr(s, "clamav_port", 1)  # scanner down
     r = await client.post(f"{base}/documents/upload", files=files(("other.txt", TXT + b"more")))
@@ -197,7 +214,9 @@ async def test_upload_rejects_infected_files_and_fails_closed(client, app, monke
 
 
 async def test_failed_logins_are_audited_without_the_email(client, app):
-    await client.post("/api/v1/auth/login", json={"email": "victim@example.com", "password": "bad-pass-1"})
+    await client.post(
+        "/api/v1/auth/login", json={"email": "victim@example.com", "password": "bad-pass-1"}
+    )
     log = await app.state.db.audit_logs.find_one({"action": "auth.login_failed"})
     assert log and log["ip"] and len(log["target"]["email_hash"]) == 12
     assert "victim" not in str(log)
@@ -205,7 +224,11 @@ async def test_failed_logins_are_audited_without_the_email(client, app):
 
 async def test_readiness_reports_search_and_redis_status(client):
     r = await client.get("/health/ready")
-    assert r.status_code == 200 and r.json()["search"]["backend"] == "local" and r.json()["redis"] is None
+    assert (
+        r.status_code == 200
+        and r.json()["search"]["backend"] == "local"
+        and r.json()["redis"] is None
+    )
 
 
 def test_secrets_never_appear_in_settings_repr():

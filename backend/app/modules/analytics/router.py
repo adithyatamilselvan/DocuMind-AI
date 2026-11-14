@@ -39,7 +39,11 @@ class AuditEntry(BaseModel):
 
 @router.get("/audit-logs", response_model=Page[AuditEntry])
 async def audit_logs(
-    ctx: Admin, db: DB, paging: Annotated[PageParams, Depends()], action: str | None = None, actor_id: str | None = None
+    ctx: Admin,
+    db: DB,
+    paging: Annotated[PageParams, Depends()],
+    action: str | None = None,
+    actor_id: str | None = None,
 ):
     """Workspace audit trail (admins only)."""
     from app.core.ids import to_oid
@@ -52,12 +56,27 @@ async def audit_logs(
     if actor_id:
         q["actor_id"] = to_oid(actor_id, "User")
     total = await db.audit_logs.count_documents(q)
-    rows = [a async for a in db.audit_logs.find(q).sort("created_at", -1).skip(paging.skip).limit(paging.page_size)]
-    names = {u["_id"]: u["name"] async for u in db.users.find({"_id": {"$in": [a["actor_id"] for a in rows if a.get("actor_id")]}})}
+    rows = [
+        a
+        async for a in db.audit_logs.find(q)
+        .sort("created_at", -1)
+        .skip(paging.skip)
+        .limit(paging.page_size)
+    ]
+    names = {
+        u["_id"]: u["name"]
+        async for u in db.users.find(
+            {"_id": {"$in": [a["actor_id"] for a in rows if a.get("actor_id")]}}
+        )
+    }
     items = [
         AuditEntry(
-            id=str(a["_id"]), action=a["action"], actor_name=names.get(a.get("actor_id")),
-            target=a.get("target", {}), ip=a.get("ip"), created_at=a["created_at"],
+            id=str(a["_id"]),
+            action=a["action"],
+            actor_name=names.get(a.get("actor_id")),
+            target=a.get("target", {}),
+            ip=a.get("ip"),
+            created_at=a["created_at"],
         )  # fmt: skip
         for a in rows
     ]
@@ -112,7 +131,10 @@ async def usage(ctx: Admin, db: DB, days: int = 30):
         {"$group": {"_id": "$user_id", "n": {"$sum": 1}, "t": {"$sum": {"$add": [{"$ifNull": ["$tokens_in", 0]}, {"$ifNull": ["$tokens_out", 0]}]}}}},
         {"$sort": {"t": -1}},
     ])]  # fmt: skip
-    names = {u["_id"]: u["name"] async for u in db.users.find({"_id": {"$in": [r["_id"] for r in per_user if r["_id"]]}})}
+    names = {
+        u["_id"]: u["name"]
+        async for u in db.users.find({"_id": {"$in": [r["_id"] for r in per_user if r["_id"]]}})
+    }
     return UsageOut(
         since=since, totals=rows,
         by_user=[UserUsage(user_id=str(r["_id"]) if r["_id"] else None, name=names.get(r["_id"]), requests=r["n"], tokens=r["t"]) for r in per_user],

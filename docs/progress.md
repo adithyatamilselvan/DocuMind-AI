@@ -62,7 +62,11 @@
   and versions (deterministic paragraph diff from stored extractions; AI summary optional, works without LLM).
 - [x] Phase 15: reports (7 types) built from verified analyses with numbered references; PDF (ReportLab) + DOCX (python-docx)
   generated in background job, stored privately, downloadable; tests parse the actual PDF/DOCX bytes.
-- [ ] Phases 16-19: not started
+- [x] Phase 16: audit log, usage report, data export, account deletion, workspace purge. [x] Phase 17: security hardening (headers, body
+  limits, Redis limiter, ClamAV, prod CSP verified by e2e/prod-smoke.mjs). [x] Phase 18: e2e for isolation/delete/overflow.
+  [x] Phase 19: README, architecture, schema, API (generated), security, deployment, troubleshooting docs.
+- [x] MVP verification: real local embedding model (all-MiniLM-L6-v2) through the full pipeline: 5/5 paraphrased questions retrieved the right
+  document (`pytest -m integration tests/test_real_embeddings.py`).
 
 ## Test results (observed)
 - Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 189 passed, 1 skipped (skipped = real Tesseract); full run ~3 min
@@ -97,3 +101,8 @@ Phase 11: document insights (Pydantic-validated LLM output, async job, separate 
 ## Testing notes
 - e2e tests must wait for the upload input to be enabled (it is disabled until /system/config loads).
 - React effects must not return values (`useEffect(() => el?.scrollIntoView())` crashed the page); use braces.
+
+## Status at MVP checkpoint
+- Last full backend run: 205 passed, 1 skipped (+2 env-leak failures fixed by hermetic conftest; re-run 55 core tests green). Core UI e2e 12/12.
+- Still unverified (needs your keys/infra): live Claude calls (answers, insights, research, comparison), Atlas Vector Search, Redis/Celery, S3/MinIO, Docker, real Tesseract.
+- Run locally: `.\start.ps1`; set ANTHROPIC_API_KEY in `.env`; local embeddings need `pip install -e ".[local]"` in backend.

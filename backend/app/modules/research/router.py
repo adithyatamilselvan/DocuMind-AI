@@ -86,8 +86,13 @@ async def _start(
         title=title,
         documents=docs,
     )
-    await audit.record(db, action=f"research.{kind}", actor_id=ctx.user_id, workspace_id=ctx.workspace_id,
-                       target={"analysis": str(rec["_id"])})
+    await audit.record(
+        db,
+        action=f"research.{kind}",
+        actor_id=ctx.user_id,
+        workspace_id=ctx.workspace_id,
+        target={"analysis": str(rec["_id"])},
+    )
     await queue.enqueue(job["_id"])
     return AnalysisOut.from_doc(rec)
 

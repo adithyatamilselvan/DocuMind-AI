@@ -8,6 +8,13 @@ os.environ.update(
     MAX_UPLOAD_MB="1",
     LOCAL_STORAGE_DIR=".local-data/test-objects",
     JOB_BACKEND="inline",
+    # Hermetic: never inherit provider settings or keys from a developer's .env
+    EMBEDDING_PROVIDER="openai",
+    EMBEDDING_MODEL="text-embedding-3-large",
+    EMBEDDING_DIM="1024",
+    LLM_PROVIDER="anthropic",
+    ANTHROPIC_API_KEY="",
+    OPENAI_API_KEY="",
 )
 
 import httpx  # noqa: E402

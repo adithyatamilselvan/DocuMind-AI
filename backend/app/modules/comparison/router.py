@@ -75,8 +75,13 @@ async def compare_documents(body: CompareIn, ctx: Editor, db: DB, queue: Queue, 
         title=body.title or " vs ".join(d["title"] for d in ordered)[:200], document_ids=ids,
         version_ids=[d["current_version_id"] for d in ordered], aspects=body.aspects,
     )  # fmt: skip
-    await audit.record(db, action="comparison.documents", actor_id=ctx.user_id, workspace_id=ctx.workspace_id,
-                       target={"comparison": str(rec["_id"])})
+    await audit.record(
+        db,
+        action="comparison.documents",
+        actor_id=ctx.user_id,
+        workspace_id=ctx.workspace_id,
+        target={"comparison": str(rec["_id"])},
+    )
     await queue.enqueue(job["_id"])
     return ComparisonOut.from_doc(rec)
 

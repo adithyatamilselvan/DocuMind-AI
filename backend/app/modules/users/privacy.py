@@ -28,7 +28,10 @@ async def export_my_data(auth: AuthUser, db: DB):
     ws_ids = [m["workspace_id"] for m in memberships]
     data = {
         "user": _clean(u, ("password_hash",)),
-        "workspaces": [_clean(w) async for w in db.workspaces.find({"_id": {"$in": ws_ids}, "deleted_at": None})],
+        "workspaces": [
+            _clean(w)
+            async for w in db.workspaces.find({"_id": {"$in": ws_ids}, "deleted_at": None})
+        ],
         "memberships": [_clean(m) for m in memberships],
         "documents": [
             _clean(d) async for d in db.documents.find({"owner_id": auth.id, "deleted_at": None})
@@ -50,7 +53,9 @@ class DeleteAccountIn(BaseModel):
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_my_account(body: DeleteAccountIn, request: Request, auth: AuthUser, db: DB) -> Response:
+async def delete_my_account(
+    body: DeleteAccountIn, request: Request, auth: AuthUser, db: DB
+) -> Response:
     """Permanently delete the account. Workspaces where the user is the only member are purged;
     workspaces with other members require transferring ownership first."""
     valid, _ = await verify_password(body.password, auth.user["password_hash"])
@@ -58,14 +63,22 @@ async def delete_my_account(body: DeleteAccountIn, request: Request, auth: AuthU
         raise AppError(400, "invalid_credentials", "Password is incorrect")
     blocking, solo = [], []
     async for m in db.memberships.find({"user_id": auth.id, "status": "active"}):
-        others = await db.memberships.count_documents({"workspace_id": m["workspace_id"], "user_id": {"$ne": auth.id}, "status": "active"})
-        owners = await db.memberships.count_documents({"workspace_id": m["workspace_id"], "role": Role.owner.value, "status": "active"})
+        others = await db.memberships.count_documents(
+            {"workspace_id": m["workspace_id"], "user_id": {"$ne": auth.id}, "status": "active"}
+        )
+        owners = await db.memberships.count_documents(
+            {"workspace_id": m["workspace_id"], "role": Role.owner.value, "status": "active"}
+        )
         if m["role"] == Role.owner.value and owners == 1 and others:
             blocking.append(str(m["workspace_id"]))
         elif not others:
             solo.append(m["workspace_id"])
     if blocking:
-        raise conflict("Transfer ownership of your shared workspaces before deleting your account", "owns_shared_workspaces", {"workspace_ids": blocking})
+        raise conflict(
+            "Transfer ownership of your shared workspaces before deleting your account",
+            "owns_shared_workspaces",
+            {"workspace_ids": blocking},
+        )
     store = request.app.state.store
     for ws_id in solo:
         await purge_workspace(db, store, ws_id)

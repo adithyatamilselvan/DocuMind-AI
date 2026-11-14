@@ -79,9 +79,14 @@ async def login(body: LoginIn, request: Request, response: Response, db: DB, set
     try:
         user = await service.authenticate(db, body.email, body.password)
     except AppError as e:
-        if e.code == "invalid_credentials":  # no email/password is stored, only a short hash for correlation
+        if (
+            e.code == "invalid_credentials"
+        ):  # no email/password is stored, only a short hash for correlation
             await audit.record(
-                db, action="auth.login_failed", actor_id=None, ip=client_ip(request),
+                db,
+                action="auth.login_failed",
+                actor_id=None,
+                ip=client_ip(request),
                 target={"email_hash": hashlib.sha256(body.email.lower().encode()).hexdigest()[:12]},
             )
         raise

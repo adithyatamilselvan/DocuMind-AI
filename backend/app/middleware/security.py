@@ -50,9 +50,20 @@ class BodyLimitMiddleware:
             headers = {k.lower(): v for k, v in scope["headers"]}
             ctype = headers.get(b"content-type", b"")
             length = headers.get(b"content-length", b"")
-            if not ctype.startswith(b"multipart/") and length.isdigit() and int(length) > self.limit:
+            if (
+                not ctype.startswith(b"multipart/")
+                and length.isdigit()
+                and int(length) > self.limit
+            ):
                 resp = JSONResponse(
-                    {"error": {"code": "payload_too_large", "message": "Request body is too large", "details": None, "request_id": None}},
+                    {
+                        "error": {
+                            "code": "payload_too_large",
+                            "message": "Request body is too large",
+                            "details": None,
+                            "request_id": None,
+                        }
+                    },
                     status_code=413,
                 )
                 await resp(scope, receive, send)

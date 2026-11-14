@@ -13,7 +13,9 @@ _WORKSPACE_COLLECTIONS = (
 )  # fmt: skip
 
 
-async def purge_workspace(db: AsyncDatabase, store: ObjectStore, workspace_id: ObjectId) -> dict[str, int]:
+async def purge_workspace(
+    db: AsyncDatabase, store: ObjectStore, workspace_id: ObjectId
+) -> dict[str, int]:
     """Delete stored objects first (so nothing is orphaned if a later step fails), then records.
     Audit logs are kept but detached from content (they hold no document text)."""
     keys: list[str] = []
