@@ -28,6 +28,7 @@ export default defineConfig({
         RATE_LIMIT_ENABLED: "false",
         // Deterministic offline embedder so documents genuinely complete the pipeline in e2e.
         EMBEDDING_PROVIDER: "hashing",
+        LLM_PROVIDER: "fake",
         LOCAL_STORAGE_DIR: ".local-data/e2e-objects",
         FRONTEND_URL: `http://localhost:${FRONTEND}`,
       },

@@ -39,14 +39,22 @@
   uncited/ungrounded answers withheld), /ask and /search endpoints, retrieval eval harness (evals/).
   Retrieval metrics on sample corpus (hashing embedder): keyword/hybrid R@3=1.00 MRR=1.00; semantic-only 0.67
   (test embedder is lexical). NOT measured: real-model semantic quality, live Claude faithfulness (needs keys).
-- [ ] Phases 10-19: not started
+- [x] Phase 10: conversations/messages API (private per user, scope, search incl. message text, rename/delete,
+  feedback, regenerate), SSE endpoint (user_message/title/status/retrieval/token/final/error/done; no buffering
+  headers; slot-limited concurrency), stored messages carry validated citations; assistant UI (streaming, stop,
+  retry, interactive [n] citation chips, source panel with exact pages, copy/regenerate/feedback, history sidebar +
+  mobile sheet, document scope picker, consent banner); PDF.js viewer (page nav, zoom, in-document search across pages,
+  citation-passage highlight in the text layer), text viewer for DOCX/TXT (virtual sections flagged approximate);
+  `/documents/{id}/text` endpoint. Accessibility fix: links styled as buttons now use real <a> (LinkButton), because
+  Base UI forces role="button" on `Button render={<Link/>}`.
+- [ ] Phases 11-19: not started
 
 ## Test results (observed)
-- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 134 passed, 1 skipped (adds RAG units/API, retrieval eval; skipped = real Tesseract)
+- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 145 passed, 1 skipped (adds chat/SSE/text endpoint; skipped = real Tesseract)
 - Ruff clean.
 - Frontend (run in PowerShell, NOT Git Bash: npm scripts fail to find `node` there):
-  `npx vitest run` -> 14 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
-  `npx playwright test` -> 18 passed (incl. upload -> Ready through the real pipeline with the hashing embedder) (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
+  `npx vitest run` -> 28 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
+  `npx playwright test` -> 22 passed x2 runs (e2e backend uses EMBEDDING_PROVIDER=hashing + LLM_PROVIDER=fake; includes upload -> Ready, chat -> cited answer -> source panel -> highlighted PDF page, in-doc search, zoom, rename/delete, mobile) (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
   includes a no-horizontal-overflow assertion). E2E uses DB `documind_e2e`, ports 8100/3100.
 
 ## Known limitations
@@ -56,7 +64,7 @@
 - Workspace delete is soft; purge job comes with documents (Phase 6+).
 
 ## Next steps
-Phase 10: conversations/messages collections + API, SSE streaming endpoint, chat UI with interactive citations, PDF viewer highlight. Set ANTHROPIC_API_KEY + OPENAI_API_KEY for live use.
+Phase 11: document insights (Pydantic-validated LLM output, async job, separate collection), insights UI, suggested questions. Live Claude output is untested (no key): covered by scripted-LLM tests.
 
 ## Windows notes
 - Use PowerShell for npm/npx. Git Bash cannot launch Node subprocesses spawned via cmd.
@@ -70,3 +78,7 @@ Phase 10: conversations/messages collections + API, SSE streaming endpoint, chat
 - MongoDB Atlas M0 + `python backend/scripts/verify_indexes.py --create --smoke` with `VECTOR_BACKEND=atlas`.
 - `OPENAI_API_KEY` (embeddings, default provider) and `ANTHROPIC_API_KEY` (LLM). Without the embedding key real
   uploads fail with "The embedding provider is not configured"; use EMBEDDING_PROVIDER=hashing for offline demos only.
+
+## Testing notes
+- e2e tests must wait for the upload input to be enabled (it is disabled until /system/config loads).
+- React effects must not return values (`useEffect(() => el?.scrollIntoView())` crashed the page); use braces.

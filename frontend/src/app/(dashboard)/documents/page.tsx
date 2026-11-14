@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -110,9 +111,9 @@ export default function DocumentsPage() {
         description={list.data ? `${total} document${total === 1 ? "" : "s"}` : undefined}
         actions={
           canEdit && (
-            <Button nativeButton={false} render={<Link href="/upload" />}>
+            <LinkButton href="/upload">
               <Upload className="size-4" aria-hidden /> Upload
-            </Button>
+            </LinkButton>
           )
         }
       />
@@ -180,7 +181,7 @@ export default function DocumentsPage() {
           icon={FileText}
           title={filtered ? "No documents match your filters" : "No documents yet"}
           description={filtered ? "Try a different search or clear the filters." : "Upload PDF, DOCX or TXT files to get started."}
-          action={!filtered && canEdit ? <Button nativeButton={false} render={<Link href="/upload" />}>Upload documents</Button> : undefined}
+          action={!filtered && canEdit ? <LinkButton href="/upload">Upload documents</LinkButton> : undefined}
         />
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card">

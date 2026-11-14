@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Download, RotateCw, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Download, Eye, RotateCw, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -14,6 +14,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"; // fmt: skip
 import { Badge } from "@/components/ui/badge";
+import { AnchorButton, LinkButton } from "@/components/ui/link-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -122,9 +123,12 @@ export default function DocumentDetailPage() {
         description={d.filename}
         actions={
           <>
-            <Button variant="outline" size="sm" nativeButton={false} render={<a href={uploadService.downloadUrl(ws!, id)} download />}>
+<LinkButton variant="outline" size="sm" href={`/documents/${id}/view`}>
+              <Eye className="size-3.5" aria-hidden /> View
+            </LinkButton>
+                        <AnchorButton variant="outline" size="sm" href={uploadService.downloadUrl(ws!, id)} download>
               <Download className="size-3.5" aria-hidden /> Download
-            </Button>
+            </AnchorButton>
             {canEdit && d.status === "FAILED" && (
               <Button variant="outline" size="sm" disabled={retry.isPending} onClick={() => retry.mutate()}>
                 <RotateCw className="size-3.5" aria-hidden /> Retry processing

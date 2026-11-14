@@ -71,7 +71,10 @@ INDEXES: dict[str, list[IndexModel]] = {
             [("workspace_id", ASC), ("user_id", ASC), ("updated_at", DESC)], name="ws_user_updated"
         )
     ],
-    "messages": [IndexModel([("conversation_id", ASC), ("created_at", ASC)], name="conv_created")],
+    "messages": [
+        IndexModel([("conversation_id", ASC), ("created_at", ASC)], name="conv_created"),
+        IndexModel([("content", "text")], name="msg_text", default_language="none"),
+    ],
     "processing_jobs": [
         IndexModel([("workspace_id", ASC), ("state", ASC)], name="ws_state"),
         IndexModel([("state", ASC), ("updated_at", ASC)], name="state_updated"),

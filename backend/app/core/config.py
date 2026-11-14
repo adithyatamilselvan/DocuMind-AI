@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     rag_min_vector_score: float = Field(0.2, alias="RAG_MIN_VECTOR_SCORE")
     rag_multi_query: bool = Field(True, alias="RAG_MULTI_QUERY")
     rag_history_turns: int = Field(6, alias="RAG_HISTORY_TURNS")
+    llm_concurrency: int = Field(8, alias="LLM_CONCURRENCY")
 
     # Extraction / OCR
     ocr_enabled: bool = Field(True, alias="OCR_ENABLED")

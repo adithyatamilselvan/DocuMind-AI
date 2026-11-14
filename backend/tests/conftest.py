@@ -118,3 +118,11 @@ def hashing(monkeypatch):
 
     monkeypatch.setattr(get_settings(), "embedding_provider", "hashing")
     yield
+
+
+@pytest.fixture
+def ai(monkeypatch, hashing):
+    """Hashing embeddings + extractive fake LLM: no network, deterministic."""
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "llm_provider", "fake")

@@ -333,6 +333,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/documents/{document_id}/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Document Text
+         * @description Extracted text by page (for the viewer, in-document search and non-PDF documents).
+         */
+        get: operations["document_text_api_v1_workspaces__workspace_id__documents__document_id__text_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/documents": {
         parameters: {
             query?: never;
@@ -459,6 +479,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask
+         * @description Stateless grounded question answering over the caller's documents.
+         */
+        post: operations["ask_api_v1_workspaces__workspace_id__ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search
+         * @description Semantic, keyword or hybrid search over document passages.
+         */
+        post: operations["search_api_v1_workspaces__workspace_id__search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations_api_v1_workspaces__workspace_id__conversations_get"];
+        put?: never;
+        /** Create Conversation */
+        post: operations["create_conversation_api_v1_workspaces__workspace_id__conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["get_conversation_api_v1_workspaces__workspace_id__conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Conversation */
+        delete: operations["delete_conversation_api_v1_workspaces__workspace_id__conversations__conversation_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Conversation */
+        patch: operations["update_conversation_api_v1_workspaces__workspace_id__conversations__conversation_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Message
+         * @description Ask a question in a conversation. Streams Server-Sent Events:
+         *     user_message, title?, status*, retrieval, token*, final, error?, done.
+         */
+        post: operations["send_message_api_v1_workspaces__workspace_id__conversations__conversation_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/conversations/{conversation_id}/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Regenerate
+         * @description Replace the last assistant answer by generating it again for the same question.
+         */
+        post: operations["regenerate_api_v1_workspaces__workspace_id__conversations__conversation_id__regenerate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/conversations/{conversation_id}/messages/{message_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Message Feedback */
+        put: operations["message_feedback_api_v1_workspaces__workspace_id__conversations__conversation_id__messages__message_id__feedback_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -468,6 +623,26 @@ export interface paths {
         };
         /** Health */
         get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description Readiness: database reachable AND the search indexes verified (not assumed).
+         */
+        get: operations["ready_health_ready_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -502,6 +677,39 @@ export interface components {
             email: string;
             /** @default viewer */
             role: components["schemas"]["Role"];
+        };
+        /** AskIn */
+        AskIn: {
+            /** Question */
+            question: string;
+            /** History */
+            history?: components["schemas"]["HistoryMessage"][];
+            filters?: components["schemas"]["Filters"];
+            /** Top K */
+            top_k?: number | null;
+        };
+        /** AskOut */
+        AskOut: {
+            /** Answer */
+            answer: string;
+            /** Citations */
+            citations: components["schemas"]["CitationOut"][];
+            /** Grounded */
+            grounded: boolean;
+            /** Insufficient Evidence */
+            insufficient_evidence: boolean;
+            /** Warnings */
+            warnings: string[];
+            /** Retrieval */
+            retrieval: {
+                [key: string]: unknown;
+            };
+            /** Usage */
+            usage: {
+                [key: string]: unknown;
+            };
+            /** Prompt Version */
+            prompt_version: string;
         };
         /** Body_upload_documents_api_v1_workspaces__workspace_id__documents_upload_post */
         Body_upload_documents_api_v1_workspaces__workspace_id__documents_upload_post: {
@@ -541,6 +749,29 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** CitationOut */
+        CitationOut: {
+            /** Index */
+            index: number;
+            /** Chunk Id */
+            chunk_id: string;
+            /** Document Id */
+            document_id: string;
+            /** Document Title */
+            document_title: string;
+            /** Version Id */
+            version_id: string;
+            /** Page Number */
+            page_number: number | null;
+            /** Page Is Exact */
+            page_is_exact: boolean;
+            /** Section Heading */
+            section_heading: string | null;
+            /** Snippet */
+            snippet: string;
+            /** Score */
+            score: number;
+        };
         /** ClientConfig */
         ClientConfig: {
             /** Max Upload Mb */
@@ -571,6 +802,48 @@ export interface components {
              */
             created_at: string;
         };
+        /** ConversationDetail */
+        ConversationDetail: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            scope: components["schemas"]["Filters"];
+            /** Message Count */
+            message_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Messages */
+            messages: components["schemas"]["MessageOut"][];
+        };
+        /** ConversationOut */
+        ConversationOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            scope: components["schemas"]["Filters"];
+            /** Message Count */
+            message_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** CountItem */
         CountItem: {
             /** Label */
@@ -584,6 +857,12 @@ export interface components {
             name: string;
             /** Parent Id */
             parent_id?: string | null;
+        };
+        /** CreateConversationIn */
+        CreateConversationIn: {
+            /** Title */
+            title?: string | null;
+            scope?: components["schemas"]["Filters"];
         };
         /** CreateWorkspaceIn */
         CreateWorkspaceIn: {
@@ -641,6 +920,35 @@ export interface components {
          * @enum {string}
          */
         DocumentStatus: "UPLOADING" | "QUEUED" | "PROCESSING" | "EXTRACTING" | "OCR_PROCESSING" | "CHUNKING" | "EMBEDDING" | "INDEXING" | "COMPLETED" | "FAILED";
+        /** DocumentTextOut */
+        DocumentTextOut: {
+            /** Page Basis */
+            page_basis: string;
+            /** Pages */
+            pages: components["schemas"]["TextPageOut"][];
+        };
+        /** FeedbackIn */
+        FeedbackIn: {
+            /** Rating */
+            rating: ("up" | "down") | null;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** Filters */
+        Filters: {
+            /** Document Ids */
+            document_ids?: string[] | null;
+            /** Collection Ids */
+            collection_ids?: string[] | null;
+            /** Knowledge Base Ids */
+            knowledge_base_ids?: string[] | null;
+            /** Category */
+            category?: string | null;
+            /** Tags */
+            tags?: string[] | null;
+            /** Mime Type */
+            mime_type?: string | null;
+        };
         /** ForgotPasswordIn */
         ForgotPasswordIn: {
             /**
@@ -653,6 +961,16 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HistoryMessage */
+        HistoryMessage: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Content */
+            content: string;
         };
         /** LoginIn */
         LoginIn: {
@@ -678,6 +996,33 @@ export interface components {
              * Format: date-time
              */
             joined_at: string;
+        };
+        /** MessageOut */
+        MessageOut: {
+            /** Id */
+            id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Content */
+            content: string;
+            /** Citations */
+            citations?: components["schemas"]["CitationOut"][];
+            /** Grounded */
+            grounded?: boolean | null;
+            /** Insufficient Evidence */
+            insufficient_evidence?: boolean | null;
+            /** Warnings */
+            warnings?: string[];
+            /** Feedback */
+            feedback?: ("up" | "down") | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** Overview */
         Overview: {
@@ -762,6 +1107,78 @@ export interface components {
          * @enum {string}
          */
         Role: "viewer" | "editor" | "admin" | "owner";
+        /** SearchHit */
+        SearchHit: {
+            /** Chunk Id */
+            chunk_id: string;
+            /** Document Id */
+            document_id: string;
+            /** Document Title */
+            document_title: string;
+            /** Page Number */
+            page_number: number | null;
+            /** Section Heading */
+            section_heading: string | null;
+            /** Snippet */
+            snippet: string;
+            /** Score */
+            score: number;
+            /** Vector Score */
+            vector_score: number | null;
+            /** Keyword Score */
+            keyword_score: number | null;
+        };
+        /** SearchIn */
+        SearchIn: {
+            /** Query */
+            query: string;
+            /**
+             * Mode
+             * @default hybrid
+             * @enum {string}
+             */
+            mode: "hybrid" | "semantic" | "keyword";
+            filters?: components["schemas"]["Filters"];
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
+        };
+        /** SearchOut */
+        SearchOut: {
+            /** Hits */
+            hits: components["schemas"]["SearchHit"][];
+            /** Terms */
+            terms: string[];
+            /** Debug */
+            debug: {
+                [key: string]: unknown;
+            };
+        };
+        /** SendMessageIn */
+        SendMessageIn: {
+            /** Content */
+            content: string;
+        };
+        /** TextBlockOut */
+        TextBlockOut: {
+            /** Type */
+            type: string;
+            /** Text */
+            text: string;
+            /** Level */
+            level?: number | null;
+        };
+        /** TextPageOut */
+        TextPageOut: {
+            /** Number */
+            number: number;
+            /** Ocr */
+            ocr: boolean;
+            /** Blocks */
+            blocks: components["schemas"]["TextBlockOut"][];
+        };
         /** TopDocument */
         TopDocument: {
             /** Id */
@@ -775,6 +1192,12 @@ export interface components {
         UpdateCollectionIn: {
             /** Name */
             name: string;
+        };
+        /** UpdateConversationIn */
+        UpdateConversationIn: {
+            /** Title */
+            title?: string | null;
+            scope?: components["schemas"]["Filters"] | null;
         };
         /** UpdateDocumentIn */
         UpdateDocumentIn: {
@@ -1701,6 +2124,38 @@ export interface operations {
             };
         };
     };
+    document_text_api_v1_workspaces__workspace_id__documents__document_id__text_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTextOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_documents_api_v1_workspaces__workspace_id__documents_get: {
         parameters: {
             query?: {
@@ -2061,7 +2516,366 @@ export interface operations {
             };
         };
     };
+    ask_api_v1_workspaces__workspace_id__ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_v1_workspaces__workspace_id__search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_conversations_api_v1_workspaces__workspace_id__conversations_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_conversation_api_v1_workspaces__workspace_id__conversations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConversationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_conversation_api_v1_workspaces__workspace_id__conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_conversation_api_v1_workspaces__workspace_id__conversations__conversation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_conversation_api_v1_workspaces__workspace_id__conversations__conversation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConversationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_v1_workspaces__workspace_id__conversations__conversation_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regenerate_api_v1_workspaces__workspace_id__conversations__conversation_id__regenerate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    message_feedback_api_v1_workspaces__workspace_id__conversations__conversation_id__messages__message_id__feedback_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                message_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    ready_health_ready_get: {
         parameters: {
             query?: never;
             header?: never;

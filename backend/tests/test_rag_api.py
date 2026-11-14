@@ -10,12 +10,6 @@ from .helpers import make_docx, make_pdf
 from .test_indexing import BIOLOGY, FINANCE, upload
 
 
-@pytest.fixture
-def ai(monkeypatch, hashing):
-    """Hashing embeddings + extractive fake LLM: no network, deterministic."""
-    monkeypatch.setattr(get_settings(), "llm_provider", "fake")
-
-
 class Scripted:
     """LLM whose answer is chosen by the test; records every call."""
 

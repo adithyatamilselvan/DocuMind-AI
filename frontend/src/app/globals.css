@@ -161,3 +161,34 @@
     }
   }
 }
+
+/* PDF.js text layer: invisible, selectable text positioned over the rendered canvas. */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+}
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.textLayer span.dm-hl {
+  background: oklch(0.85 0.16 90 / 0.55);
+  border-radius: 2px;
+}
+.textLayer span.dm-hl-cite {
+  background: oklch(0.78 0.14 272 / 0.45);
+  border-radius: 2px;
+}
+.textLayer ::selection {
+  background: oklch(0.6 0.15 250 / 0.35);
+}

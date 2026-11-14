@@ -1,4 +1,4 @@
-import { FileText, LayoutDashboard, type LucideIcon, Settings, Upload, Users } from "lucide-react";
+import { FileText, LayoutDashboard, MessagesSquare, type LucideIcon, Settings, Upload, Users } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; items: NavItem[] };
@@ -8,6 +8,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Overview",
     items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    label: "Workspace AI",
+    items: [{ href: "/assistant", label: "Assistant", icon: MessagesSquare }],
   },
   {
     label: "Library",

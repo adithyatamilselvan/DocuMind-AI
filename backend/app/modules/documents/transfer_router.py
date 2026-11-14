@@ -1,5 +1,6 @@
 """Upload, versions, download, retry and processing status for documents."""
 
+import json
 from datetime import datetime
 from typing import Annotated, Any
 from urllib.parse import quote
@@ -15,6 +16,7 @@ from app.modules.auth.deps import DB
 from app.modules.documents import service, upload
 from app.modules.documents.deps import Config, Queue, Store
 from app.modules.documents.schemas import DocumentOut
+from app.modules.ingestion.stages import extracted_key
 from app.modules.workspaces.deps import WorkspaceContext, editor_ctx, viewer_ctx
 from app.storage.base import ObjectNotFoundError
 
@@ -213,3 +215,45 @@ async def processing_status(document_id: str, ctx: Viewer, db: DB):
         state=job["state"], progress=job["progress"], attempts=job["attempts"],
         error=job.get("error"), stages={k: v["state"] for k, v in job["stages"].items()},
     )  # fmt: skip
+
+
+class TextBlockOut(BaseModel):
+    type: str
+    text: str
+    level: int | None = None
+
+
+class TextPageOut(BaseModel):
+    number: int
+    ocr: bool
+    blocks: list[TextBlockOut]
+
+
+class DocumentTextOut(BaseModel):
+    page_basis: str
+    pages: list[TextPageOut]
+
+
+@router.get("/{document_id}/text", response_model=DocumentTextOut)
+async def document_text(document_id: str, ctx: Viewer, db: DB, store: Store):
+    """Extracted text by page (for the viewer, in-document search and non-PDF documents)."""
+    doc = await service.get_document(db, ctx.workspace_id, document_id)
+    v = await db.document_versions.find_one({"_id": doc["current_version_id"]})
+    try:
+        data = json.loads(await store.get_bytes(extracted_key(v["storage_key"])))
+    except ObjectNotFoundError:
+        raise not_found("Text has not been extracted yet") from None
+    return DocumentTextOut(
+        page_basis=data["page_basis"],
+        pages=[
+            TextPageOut(
+                number=p["number"],
+                ocr=p.get("ocr", False),
+                blocks=[
+                    TextBlockOut(type=b["type"], text=b["text"], level=b.get("level"))
+                    for b in p["blocks"]
+                ],
+            )  # fmt: skip
+            for p in data["pages"]
+        ],
+    )
