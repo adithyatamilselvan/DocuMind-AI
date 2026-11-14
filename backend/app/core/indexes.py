@@ -8,6 +8,7 @@ from pymongo import ASCENDING as ASC
 from pymongo import DESCENDING as DESC
 from pymongo import IndexModel
 from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.errors import OperationFailure
 
 INDEXES: dict[str, list[IndexModel]] = {
     "users": [IndexModel([("email", ASC)], unique=True, name="uq_email")],
@@ -65,7 +66,14 @@ INDEXES: dict[str, list[IndexModel]] = {
         IndexModel([("document_version_id", ASC), ("kind", ASC)], unique=True, name="uq_ver_kind"),
         IndexModel([("workspace_id", ASC), ("document_id", ASC)], name="ws_doc"),
     ],
-    "knowledge_bases": [IndexModel([("workspace_id", ASC), ("name", ASC)], name="ws_name")],
+    "knowledge_bases": [
+        IndexModel(
+            [("workspace_id", ASC), ("name", ASC)],
+            unique=True,
+            partialFilterExpression={"deleted_at": None},
+            name="uq_ws_name",
+        )
+    ],
     "conversations": [
         IndexModel(
             [("workspace_id", ASC), ("user_id", ASC), ("updated_at", DESC)], name="ws_user_updated"
@@ -104,4 +112,16 @@ INDEXES: dict[str, list[IndexModel]] = {
 
 async def ensure_indexes(db: AsyncDatabase) -> None:
     for name, models in INDEXES.items():
-        await db[name].create_indexes(models)
+        try:
+            await db[name].create_indexes(models)
+        except OperationFailure as e:
+            if e.code not in (85, 86):  # IndexOptionsConflict / IndexKeySpecsConflict
+                raise
+            # Same keys/name but different options (definition changed between releases):
+            # drop the conflicting indexes by key pattern and recreate.
+            existing = {tuple(i["key"].items()): i["name"] async for i in await db[name].list_indexes()}
+            for m in models:
+                key = tuple(m.document["key"].items())
+                if key in existing and existing[key] != "_id_":
+                    await db[name].drop_index(existing[key])
+            await db[name].create_indexes(models)

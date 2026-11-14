@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -23,6 +24,8 @@ class Filters(BaseModel):
     category: str | None = None
     tags: list[str] | None = None
     mime_type: str | None = None
+    created_from: datetime | None = None
+    created_to: datetime | None = None
 
 
 class CitationOut(BaseModel):

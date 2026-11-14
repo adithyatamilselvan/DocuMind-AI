@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from app.ai.errors import LLMError, LLMNotConfiguredError, LLMRefusalError
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
+from app.core.ids import utcnow
 from app.modules.auth.deps import DB
 from app.modules.documents.transfer_router import require_ai_consent
 from app.modules.rag.deps import LLM, Embedder, RerankerDep, Vectors
@@ -100,6 +101,13 @@ async def search(
         db=db, store=vectors, embedder=embedder, reranker=reranker, settings=settings,
         scope=scope, queries=[body.query], mode=mode,
     )  # fmt: skip
+    await db.search_history.insert_one(
+        {
+            "workspace_id": ctx.workspace_id, "user_id": ctx.user_id, "query": body.query,
+            "mode": body.mode, "filters": body.filters.model_dump(exclude_none=True),
+            "results": len(res.chunks), "created_at": utcnow(),
+        }
+    )
     hits = [
         SearchHit(
             chunk_id=c.chunk_id,
@@ -117,3 +125,31 @@ async def search(
     return SearchOut(
         hits=hits, terms=sorted(set(_WORD.findall(body.query.lower()))), debug=res.debug
     )
+
+
+class HistoryItem(BaseModel):
+    query: str
+    mode: str
+    results: int
+    created_at: str
+
+
+@router.get("/search/history", response_model=list[HistoryItem])
+async def search_history(ctx: Viewer, db: DB, limit: int = 20):
+    rows = db.search_history.find({"workspace_id": ctx.workspace_id, "user_id": ctx.user_id}).sort("created_at", -1)
+    out: list[HistoryItem] = []
+    seen: set[tuple[str, str]] = set()
+    async for r in rows.limit(200):
+        key = (r["query"], r["mode"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(HistoryItem(query=r["query"], mode=r["mode"], results=r["results"], created_at=r["created_at"].isoformat()))
+        if len(out) >= min(limit, 50):
+            break
+    return out
+
+
+@router.delete("/search/history", status_code=204)
+async def clear_search_history(ctx: Viewer, db: DB):
+    await db.search_history.delete_many({"workspace_id": ctx.workspace_id, "user_id": ctx.user_id})
