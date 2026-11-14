@@ -224,3 +224,75 @@ async def test_download_before_ready_is_a_conflict(client, app, ai, fmt):
         app.state.queue = real
     r = await client.get(f"{base}/reports/{rec['id']}/download", params={"format": fmt})
     assert r.status_code == 409 and r.json()["error"]["code"] == "not_ready"
+
+
+# --- research report mapping: non-paper documents, missing optional fields -------------------------------------
+def _insights(**over):
+    p = {
+        "summary": "A guide to Java programming.", "executive_summary": "Covers Java basics and OOP.",
+        "key_findings": [{"text": "Java is object oriented", "page": 2, "quote": "Java is object oriented"}],
+        "key_facts": [], "topics": ["Java", "OOP"], "main_arguments": [],
+        "conclusions": [{"text": "Practice matters", "page": 9, "quote": None}], "limitations": [],
+        "classification": {"document_type": "programming guide", "category": "Software"},
+    }  # fmt: skip
+    return {"payload": {**p, **over}}
+
+
+def _sparse_analysis(is_paper: bool):
+    return {
+        "result": {
+            "is_research_paper": is_paper, "objective": None, "research_questions": [], "hypotheses": [],
+            "methodology": {"category": "other", "description": "", "evidence": []}, "datasets": [],
+            "sample_size": None, "results": [], "conclusions": [], "limitations": [], "future_work": [],
+            "potential_gaps": [],
+        }
+    }  # fmt: skip
+
+
+def _render(sections, refs):
+    from datetime import datetime
+
+    from app.modules.reports import render
+
+    args = ("Java full complete material", datetime(2026, 1, 1), "Source document: Java", sections, refs, "disc")
+    return render.to_pdf(*args), render.to_docx(*args)
+
+
+def test_non_paper_report_uses_document_insights_and_no_fake_methodology():
+    from app.modules.reports import builders as b
+
+    refs = b.Refs()
+    doc = {"_id": ObjectId(), "title": "Java"}
+    secs = b.from_paper(doc, _sparse_analysis(False), refs, _insights())
+    titles = [s["title"] for s in secs]
+    assert titles[:2] == ["Executive summary", "Document overview"]
+    assert "Key findings" in titles and "Conclusions" in titles and "Methodology" not in titles
+    assert refs.items and refs.items[0]["page"] == 2
+    pdf, dx = _render(secs, refs.items)
+    t = pdf_text(pdf)
+    assert "Java full complete material" in t and "Covers Java basics" in t and "[1]" in t
+    assert "Category: other" not in t and "Methodology" not in t
+    _, dt = docx_parts(dx)
+    assert "Covers Java basics" in dt and "[1] Java, page 2" in dt
+
+
+def test_non_paper_without_insights_and_empty_optional_fields_do_not_crash():
+    from app.modules.reports import builders as b
+
+    doc = {"_id": ObjectId(), "title": "Java"}
+    assert b.from_paper(doc, _sparse_analysis(False), b.Refs(), None) == []
+    secs = b.from_paper(doc, _sparse_analysis(False), b.Refs(), _insights(topics=[], key_findings=[], conclusions=[]))
+    assert [s["title"] for s in secs][:2] == ["Executive summary", "Document overview"]
+    _render(secs, [])
+
+
+def test_real_paper_keeps_research_sections_and_prepends_overview():
+    from app.modules.reports import builders as b
+
+    a = _sparse_analysis(True)
+    a["result"]["methodology"] = {"category": "experimental", "description": "A randomized trial.", "evidence": []}
+    a["result"]["results"] = [{"text": "Recall dropped", "page": 1, "quote": "Recall dropped"}]
+    secs = b.from_paper({"_id": ObjectId(), "title": "P"}, a, b.Refs(), _insights())
+    titles = [s["title"] for s in secs]
+    assert titles[:3] == ["Executive summary", "Document overview", "Methodology"] and "Results" in titles
+    assert "Category: experimental" in secs[2]["paragraphs"][0]

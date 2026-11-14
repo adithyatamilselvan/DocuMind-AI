@@ -53,6 +53,12 @@ async def _insights(db: AsyncDatabase, doc: dict[str, Any]) -> dict[str, Any]:
     return rec
 
 
+async def _optional_insights(db: AsyncDatabase, doc: dict[str, Any]) -> dict[str, Any] | None:
+    return await db.document_insights.find_one(
+        {"document_version_id": doc["current_version_id"], "kind": "overview", "status": "completed"}
+    )
+
+
 async def build_content(
     db: AsyncDatabase, rec: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
@@ -91,7 +97,8 @@ async def build_content(
             raise PermanentError("The research analysis is no longer available")
         if rtype == "research":
             (d,) = await docs(analysis["document_ids"])
-            return b.from_paper(d, analysis, refs), refs.items, f"Source paper: {d['title']}"
+            ins = await _optional_insights(db, d)
+            return b.from_paper(d, analysis, refs, ins), refs.items, f"Source document: {d['title']}"
         ds = await docs(analysis["document_ids"])
         return (
             b.from_synthesis(analysis, refs),

@@ -71,32 +71,85 @@ def from_insights(doc: dict[str, Any], rec: dict[str, Any], refs: Refs) -> list[
     ])  # fmt: skip
 
 
-def from_paper(doc: dict[str, Any], rec: dict[str, Any], refs: Refs) -> list[dict[str, Any]]:
+def _insight_overview(
+    doc: dict[str, Any], rec: dict[str, Any] | None, refs: Refs
+) -> list[dict[str, Any]]:
+    """Executive summary / overview from the stored document insights (already verified, no LLM call)."""
+    if not rec:
+        return []
+    p, cls = rec["payload"], rec["payload"].get("classification", {})
+    kind = " · ".join(x for x in (cls.get("document_type"), cls.get("category")) if x)
+    return keep([
+        section("Executive summary", paragraphs=[p.get("executive_summary", "")] if p.get("executive_summary") else None),
+        section("Document overview", paragraphs=[x for x in (p.get("summary"), f"Document type: {kind}" if kind else "") if x]),
+    ])  # fmt: skip
+
+
+def _insight_body(
+    doc: dict[str, Any], rec: dict[str, Any], refs: Refs, *, with_conclusions: bool = True
+) -> list[dict[str, Any]]:
+    p, did, title = rec["payload"], str(doc["_id"]), doc["title"]
+    secs = [
+        section("Major topics", paragraphs=[", ".join(p["topics"])] if p.get("topics") else None),
+        section("Key findings", bullet_list=bullets(p.get("key_findings", []), refs, did, title)),
+        section("Detailed analysis: main points", bullet_list=bullets(p.get("main_arguments", []), refs, did, title)),
+        section("Supporting facts", bullet_list=bullets(p.get("key_facts", []), refs, did, title)),
+    ]  # fmt: skip
+    if with_conclusions:
+        secs.append(section("Conclusions", bullet_list=bullets(p.get("conclusions", []), refs, did, title)))
+    secs.append(section("Limitations", bullet_list=bullets(p.get("limitations", []), refs, did, title)))
+    return keep(secs)
+
+
+def from_paper(
+    doc: dict[str, Any],
+    rec: dict[str, Any],
+    refs: Refs,
+    insights: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Adapts to the document: research-paper sections when it is a paper, otherwise the document's
+    stored insights (a programming guide has no hypotheses or scientific methodology to report)."""
     r, did, title = rec["result"], str(doc["_id"]), doc["title"]
 
     def one(f: dict[str, Any] | None) -> list[dict[str, Any]]:
         return bullets([f], refs, did, title) if f else []
 
-    m = r["methodology"]
-    return keep([
+    m = r.get("methodology") or {}
+    method_text = (m.get("description") or "").strip()
+    has_method = bool(m.get("evidence")) or bool(method_text)
+    if has_method and m.get("category", "other") != "other":
+        method_text = f"Category: {m['category']}. {method_text}".strip()
+    paper_sections = keep([
         section("Objective", bullet_list=one(r.get("objective"))),
-        section("Research questions", bullet_list=bullets(r["research_questions"], refs, did, title)),
-        section("Hypotheses", bullet_list=bullets(r["hypotheses"], refs, did, title)),
-        section("Methodology", paragraphs=[f"Category: {m['category']}. {m['description']}".strip()], bullet_list=bullets(m["evidence"], refs, did, title)),
-        section("Datasets", bullet_list=bullets(r["datasets"], refs, did, title)),
+        section("Research questions", bullet_list=bullets(r.get("research_questions", []), refs, did, title)),
+        section("Hypotheses", bullet_list=bullets(r.get("hypotheses", []), refs, did, title)),
+        section("Methodology", paragraphs=[method_text] if method_text else None, bullet_list=bullets(m.get("evidence", []), refs, did, title)),
+        section("Datasets", bullet_list=bullets(r.get("datasets", []), refs, did, title)),
         section("Sample size", bullet_list=one(r.get("sample_size"))),
-        section("Results", bullet_list=bullets(r["results"], refs, did, title)),
-        section("Conclusions", bullet_list=bullets(r["conclusions"], refs, did, title)),
-        section("Limitations", bullet_list=bullets(r["limitations"], refs, did, title)),
-        section("Future work", bullet_list=bullets(r["future_work"], refs, did, title)),
+        section("Results", bullet_list=bullets(r.get("results", []), refs, did, title)),
+        section("Conclusions", bullet_list=bullets(r.get("conclusions", []), refs, did, title)),
+        section("Limitations", bullet_list=bullets(r.get("limitations", []), refs, did, title)),
+        section("Future work", bullet_list=bullets(r.get("future_work", []), refs, did, title)),
         section(
             "Potential research gaps (AI-identified, not stated by the authors)",
             bullet_list=[
-                {"text": f"{g['text']} Rationale: {g['rationale']}", "refs": [n for n in (refs.add(did, title, e.get("page"), e.get("quote")) for e in g["evidence"]) if n]}
-                for g in r["potential_gaps"]
+                {"text": f"{g['text']} Rationale: {g['rationale']}", "refs": [n for n in (refs.add(did, title, e.get("page"), e.get("quote")) for e in g.get("evidence", [])) if n]}
+                for g in r.get("potential_gaps", [])
             ],
         ),
     ])  # fmt: skip
+    overview = _insight_overview(doc, insights, refs)
+    if r.get("is_research_paper", True) and paper_sections:
+        return overview + paper_sections
+    # Not a research paper (or nothing extracted): build from the stored document insights.
+    if insights:
+        body = _insight_body(doc, insights, refs)
+        note = section(
+            "About this report",
+            paragraphs=["This document is not a research paper, so research-specific sections (hypotheses, methodology, datasets) are omitted. The report is based on the document's analysis."],
+        )  # fmt: skip
+        return overview + body + paper_sections + [note] if (overview or body) else paper_sections
+    return paper_sections
 
 
 def from_synthesis(rec: dict[str, Any], refs: Refs) -> list[dict[str, Any]]:
