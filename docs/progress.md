@@ -52,14 +52,24 @@
   checked against extracted text, fabricated ones dropped), deterministic outline/table structure, stored in
   `document_insights`, states none/pending/running/completed/failed/unavailable, regenerate, /insights list, /suggestions,
   UI panel + overview page. ExtractiveFake provides deterministic insights offline.
-- [ ] Phases 12-19: not started
+- [x] Phase 12: knowledge bases (CRUD, membership, status, reindex; KB-scoped search/ask/chat), search history, date/category/tag/type
+  filters, minimal UI (KB list/detail, search page). ensure_indexes now migrates changed index definitions.
+- [x] Phase 13: research assistant: async paper analysis (objective/questions/hypotheses/methodology class/datasets/sample size/
+  results/conclusions/limitations/future work; every evidence quote+page verified; gaps labelled ai_inferred), cross-paper
+  synthesis (themes, comparison table, contradictions needing >=2 papers, trends, gaps), per-version caching,
+  derived artifacts deleted with their source documents.
+- [x] Phase 14: comparison: documents (per-aspect hybrid-retrieved passages, label-validated points, deterministic side-by-side)
+  and versions (deterministic paragraph diff from stored extractions; AI summary optional, works without LLM).
+- [x] Phase 15: reports (7 types) built from verified analyses with numbered references; PDF (ReportLab) + DOCX (python-docx)
+  generated in background job, stored privately, downloadable; tests parse the actual PDF/DOCX bytes.
+- [ ] Phases 16-19: not started
 
 ## Test results (observed)
-- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 162 passed, 1 skipped (skipped = real Tesseract)
+- Backend: `cd backend && .venv\Scripts\python -m pytest -q` -> 189 passed, 1 skipped (skipped = real Tesseract); full run ~3 min
 - Ruff clean.
 - Frontend (run in PowerShell, NOT Git Bash: npm scripts fail to find `node` there):
   `npx vitest run` -> 28 passed; `npx tsc --noEmit` clean; `npx eslint src e2e` clean; `npm run build` succeeds;
-  `npx playwright test` -> 24 passed (e2e backend uses EMBEDDING_PROVIDER=hashing + LLM_PROVIDER=fake; includes upload -> Ready, chat -> cited answer -> source panel -> highlighted PDF page, in-doc search, zoom, rename/delete, mobile) (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
+  `npx playwright test` -> 26 passed (incl. research -> literature review -> report -> PDF/DOCX download) (e2e backend uses EMBEDDING_PROVIDER=hashing + LLM_PROVIDER=fake; includes upload -> Ready, chat -> cited answer -> source panel -> highlighted PDF page, in-doc search, zoom, rename/delete, mobile) (auth flow, validation, settings, dashboard, library empty/filter/404; desktop Chrome + Pixel 7 viewport,
   includes a no-horizontal-overflow assertion). E2E uses DB `documind_e2e`, ports 8100/3100.
 
 ## Known limitations

@@ -168,6 +168,12 @@ async def delete_documents(db: AsyncDatabase, workspace_id: ObjectId, ids: list[
         scope = {"workspace_id": workspace_id, "document_id": {"$in": ids}}
         await db.document_chunks.delete_many(scope)
         await db.document_insights.delete_many(scope)
+        # Derived artifacts quote the document's text, so they are removed with it.
+        for coll in ("research_analyses", "document_comparisons"):
+            await db[coll].delete_many({"workspace_id": workspace_id, "document_ids": {"$in": ids}})
+        await db.reports.delete_many(
+            {"workspace_id": workspace_id, "source_document_ids": {"$in": ids}}
+        )
         await db.knowledge_bases.update_many(
             {"workspace_id": workspace_id}, {"$pull": {"document_ids": {"$in": ids}}}
         )

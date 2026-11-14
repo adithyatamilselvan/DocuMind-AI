@@ -60,7 +60,11 @@ async def _docs(db: DB, ctx: WorkspaceContext, kb: dict[str, Any]) -> list[dict[
     return [
         d
         async for d in db.documents.find(
-            {"_id": {"$in": kb.get("document_ids", [])}, "workspace_id": ctx.workspace_id, "deleted_at": None}
+            {
+                "_id": {"$in": kb.get("document_ids", [])},
+                "workspace_id": ctx.workspace_id,
+                "deleted_at": None,
+            }
         ).sort("title", 1)
     ]
 
@@ -80,7 +84,9 @@ def _index_status(docs: list[dict[str, Any]]) -> tuple[str, dict[str, int]]:
     return "indexing", counts
 
 
-async def _out(db: DB, ctx: WorkspaceContext, kb: dict[str, Any]) -> tuple[KbOut, list[dict[str, Any]], dict[str, int]]:
+async def _out(
+    db: DB, ctx: WorkspaceContext, kb: dict[str, Any]
+) -> tuple[KbOut, list[dict[str, Any]], dict[str, int]]:
     docs = await _docs(db, ctx, kb)
     st, counts = _index_status(docs)
     out = KbOut(
@@ -92,7 +98,11 @@ async def _out(db: DB, ctx: WorkspaceContext, kb: dict[str, Any]) -> tuple[KbOut
 
 async def _get(db: DB, ctx: WorkspaceContext, kb_id: str) -> dict[str, Any]:
     kb = await db.knowledge_bases.find_one(
-        {"_id": to_oid(kb_id, "Knowledge base"), "workspace_id": ctx.workspace_id, "deleted_at": None}
+        {
+            "_id": to_oid(kb_id, "Knowledge base"),
+            "workspace_id": ctx.workspace_id,
+            "deleted_at": None,
+        }
     )
     if not kb:
         raise not_found("Knowledge base not found")
@@ -102,7 +112,9 @@ async def _get(db: DB, ctx: WorkspaceContext, kb_id: str) -> dict[str, Any]:
 @router.get("", response_model=list[KbOut])
 async def list_kbs(ctx: Viewer, db: DB):
     out = []
-    async for kb in db.knowledge_bases.find({"workspace_id": ctx.workspace_id, "deleted_at": None}).sort("name", 1):
+    async for kb in db.knowledge_bases.find(
+        {"workspace_id": ctx.workspace_id, "deleted_at": None}
+    ).sort("name", 1):
         out.append((await _out(db, ctx, kb))[0])
     return out
 
@@ -118,7 +130,13 @@ async def create_kb(body: KbIn, ctx: Editor, db: DB):
         kb["_id"] = (await db.knowledge_bases.insert_one(kb)).inserted_id
     except DuplicateKeyError:
         raise conflict("A knowledge base with that name exists", "duplicate_name") from None
-    await audit.record(db, action="kb.create", actor_id=ctx.user_id, workspace_id=ctx.workspace_id, target={"kb": str(kb["_id"])})
+    await audit.record(
+        db,
+        action="kb.create",
+        actor_id=ctx.user_id,
+        workspace_id=ctx.workspace_id,
+        target={"kb": str(kb["_id"])},
+    )
     return (await _out(db, ctx, kb))[0]
 
 
@@ -150,7 +168,13 @@ async def update_kb(kb_id: str, body: KbPatch, ctx: Editor, db: DB):
 async def delete_kb(kb_id: str, ctx: Editor, db: DB) -> Response:
     kb = await _get(db, ctx, kb_id)
     await db.knowledge_bases.delete_one({"_id": kb["_id"]})  # documents themselves are untouched
-    await audit.record(db, action="kb.delete", actor_id=ctx.user_id, workspace_id=ctx.workspace_id, target={"kb": kb_id})
+    await audit.record(
+        db,
+        action="kb.delete",
+        actor_id=ctx.user_id,
+        workspace_id=ctx.workspace_id,
+        target={"kb": kb_id},
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -158,17 +182,24 @@ async def delete_kb(kb_id: str, ctx: Editor, db: DB) -> Response:
 async def add_documents(kb_id: str, body: AddDocsIn, ctx: Editor, db: DB):
     kb = await _get(db, ctx, kb_id)
     ids = [to_oid(i, "Document") for i in dict.fromkeys(body.document_ids)]
-    found = await db.documents.count_documents({"_id": {"$in": ids}, "workspace_id": ctx.workspace_id, "deleted_at": None})
+    found = await db.documents.count_documents(
+        {"_id": {"$in": ids}, "workspace_id": ctx.workspace_id, "deleted_at": None}
+    )
     if found != len(ids):
         raise bad_request("Unknown document", "invalid_document")
-    await db.knowledge_bases.update_one({"_id": kb["_id"]}, {"$addToSet": {"document_ids": {"$each": ids}}, "$set": {"updated_at": utcnow()}})
+    await db.knowledge_bases.update_one(
+        {"_id": kb["_id"]},
+        {"$addToSet": {"document_ids": {"$each": ids}}, "$set": {"updated_at": utcnow()}},
+    )
     return (await _out(db, ctx, await _get(db, ctx, kb_id)))[0]
 
 
 @router.delete("/{kb_id}/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_document(kb_id: str, document_id: str, ctx: Editor, db: DB) -> Response:
     kb = await _get(db, ctx, kb_id)
-    await db.knowledge_bases.update_one({"_id": kb["_id"]}, {"$pull": {"document_ids": to_oid(document_id, "Document")}})
+    await db.knowledge_bases.update_one(
+        {"_id": kb["_id"]}, {"$pull": {"document_ids": to_oid(document_id, "Document")}}
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -180,8 +211,8 @@ async def reindex(kb_id: str, ctx: Editor, db: DB, queue: Queue, settings: Confi
     queued = 0
     for d in await _docs(db, ctx, kb):
         if d["status"] in {"COMPLETED", "FAILED"}:
-            await upload._queue_processing(db, queue, d["_id"], ctx.workspace_id, d["current_version_id"])
+            await upload._queue_processing(
+                db, queue, d["_id"], ctx.workspace_id, d["current_version_id"]
+            )
             queued += 1
     return {"queued": queued}
-
-

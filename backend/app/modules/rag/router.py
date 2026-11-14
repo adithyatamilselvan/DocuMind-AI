@@ -103,9 +103,13 @@ async def search(
     )  # fmt: skip
     await db.search_history.insert_one(
         {
-            "workspace_id": ctx.workspace_id, "user_id": ctx.user_id, "query": body.query,
-            "mode": body.mode, "filters": body.filters.model_dump(exclude_none=True),
-            "results": len(res.chunks), "created_at": utcnow(),
+            "workspace_id": ctx.workspace_id,
+            "user_id": ctx.user_id,
+            "query": body.query,
+            "mode": body.mode,
+            "filters": body.filters.model_dump(exclude_none=True),
+            "results": len(res.chunks),
+            "created_at": utcnow(),
         }
     )
     hits = [
@@ -136,7 +140,9 @@ class HistoryItem(BaseModel):
 
 @router.get("/search/history", response_model=list[HistoryItem])
 async def search_history(ctx: Viewer, db: DB, limit: int = 20):
-    rows = db.search_history.find({"workspace_id": ctx.workspace_id, "user_id": ctx.user_id}).sort("created_at", -1)
+    rows = db.search_history.find({"workspace_id": ctx.workspace_id, "user_id": ctx.user_id}).sort(
+        "created_at", -1
+    )
     out: list[HistoryItem] = []
     seen: set[tuple[str, str]] = set()
     async for r in rows.limit(200):
@@ -144,7 +150,14 @@ async def search_history(ctx: Viewer, db: DB, limit: int = 20):
         if key in seen:
             continue
         seen.add(key)
-        out.append(HistoryItem(query=r["query"], mode=r["mode"], results=r["results"], created_at=r["created_at"].isoformat()))
+        out.append(
+            HistoryItem(
+                query=r["query"],
+                mode=r["mode"],
+                results=r["results"],
+                created_at=r["created_at"].isoformat(),
+            )
+        )
         if len(out) >= min(limit, 50):
             break
     return out

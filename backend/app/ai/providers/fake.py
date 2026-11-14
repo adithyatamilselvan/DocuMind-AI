@@ -100,6 +100,26 @@ class ExtractiveFakeLLM:
             return schema.model_validate(data), LLMUsage(
                 input_tokens=len(prompt) // 4, output_tokens=200
             )
+        if schema.__name__ in {"PaperAnalysis", "Synthesis"}:
+            prompt = messages[-1]["content"]
+            data = (
+                fake_paper_analysis(prompt)
+                if schema.__name__ == "PaperAnalysis"
+                else fake_synthesis(prompt)
+            )
+            return schema.model_validate(data), LLMUsage(
+                input_tokens=len(prompt) // 4, output_tokens=300
+            )
+        if schema.__name__ in {"ComparisonResult", "VersionSummary"}:
+            prompt = messages[-1]["content"]
+            data = (
+                fake_comparison(prompt)
+                if schema.__name__ == "ComparisonResult"
+                else fake_version_summary(prompt)
+            )
+            return schema.model_validate(data), LLMUsage(
+                input_tokens=len(prompt) // 4, output_tokens=200
+            )
         raise LLMError(f"The fake LLM does not support structured output for {schema.__name__}")
 
 
@@ -159,4 +179,174 @@ def fake_document_insights(prompt: str) -> dict:
         "limitations": [],
         "action_items": [],
         "suggested_questions": [f"What does the document say about {w}?" for w in top[:3]],
+    }
+
+
+# ---- deterministic research analysis / synthesis for LLM_PROVIDER=fake ----
+
+
+def _pick(sentences: list[tuple[int, str]], *words: str) -> list[dict]:
+    out = []
+    for n, s in sentences:
+        if any(w in s.lower() for w in words):
+            out.append({"text": s[:300], "page": n, "quote": s[:250]})
+    return out[:4]
+
+
+def fake_paper_analysis(prompt: str) -> dict:
+    pages = _fake_pages(prompt)
+    sentences = [(n, s.strip()) for n, t in pages for s in _SENT.split(t) if len(s.strip()) >= 30]
+    text = " ".join(s for _, s in sentences).lower()
+    method = next(
+        (
+            c
+            for c, w in [
+                ("survey", "survey"),
+                ("experimental", "experiment"),
+                ("simulation", "simulat"),
+                ("review", "review"),
+                ("qualitative", "interview"),
+            ]
+            if w in text
+        ),
+        "other",
+    )
+    size = re.search(r"\b(?:n\s*=\s*\d+|\d+\s+(?:participants|patients|samples|respondents))", text)
+    size_sentence = next(
+        ((n, s) for n, s in sentences if size and size.group(0) in s.lower()), None
+    )
+    limitations = _pick(sentences, "limitation", "limited")
+    future = _pick(sentences, "future")
+    obj = _pick(sentences, "aim", "objective", "we investigate", "purpose") or [
+        {"text": s[:300], "page": n, "quote": s[:250]} for n, s in sentences[:1]
+    ]
+    return {
+        "is_research_paper": bool(sentences),
+        "objective": obj[0] if obj else None,
+        "research_questions": _pick(sentences, "research question"),
+        "hypotheses": _pick(sentences, "hypothes"),
+        "methodology": {
+            "category": method,
+            "description": f"Detected from the text: {method}.",
+            "evidence": _pick(sentences, method[:5])[:1],
+        },
+        "datasets": _pick(sentences, "dataset", "data set", "corpus"),
+        "sample_size": {
+            "text": size.group(0),
+            "page": size_sentence[0],
+            "quote": size_sentence[1][:250],
+        }
+        if size_sentence
+        else None,
+        "results": _pick(sentences, "result", "found", "show", "increase", "decrease", "percent"),
+        "conclusions": _pick(sentences, "conclu"),
+        "limitations": limitations,
+        "future_work": future,
+        "potential_gaps": [
+            {
+                "text": f"Open question implied by: {x['text'][:120]}",
+                "rationale": "Stated as a limitation in the document.",
+                "evidence": [x],
+            }
+            for x in limitations[:2]
+        ],
+    }
+
+
+def fake_synthesis(prompt: str) -> dict:
+    import json as _json
+
+    body = html.unescape(prompt.split(">", 1)[1])
+    papers = [_json.loads(line) for line in body.splitlines() if line.startswith('{"paper"')]
+    items, rows, gaps = [], [], []
+    for p in papers:
+        a = p["analysis"]
+        res = (a.get("results") or [None])[0]
+        if res:
+            items.append(
+                {
+                    "text": res["text"],
+                    "paper": p["paper"],
+                    "page": res.get("page"),
+                    "quote": res.get("quote"),
+                }
+            )
+        rows.append(
+            {
+                "paper": p["paper"],
+                "methodology": a["methodology"]["category"],
+                "datasets": "; ".join(d["text"] for d in a.get("datasets", []))[:200],
+                "sample_size": (a.get("sample_size") or {}).get("text", ""),
+                "key_result": (res or {}).get("text", "")[:300],
+            }
+        )
+        gaps += [
+            {"text": g["text"], "rationale": g["rationale"], "papers": [p["paper"]]}
+            for g in a.get("potential_gaps", [])[:1]
+        ]
+    return {
+        "overview": "Synthesis of: " + "; ".join(p["title"] for p in papers),
+        "themes": [
+            {
+                "title": "Reported results",
+                "summary": "Key results reported in each paper.",
+                "items": items,
+            }
+        ]
+        if items
+        else [],
+        "comparison_table": rows,
+        "contradictions": [],
+        "trends": [],
+        "research_gaps": gaps,
+    }
+
+
+# ---- deterministic comparison for LLM_PROVIDER=fake ----
+
+_PASSAGE = re.compile(r'<passage label="([^"]+)" document="(\d+)"[^>]*>\n(.*?)\n</passage>', re.S)
+_ASPECT = re.compile(r'<aspect name="([^"]+)">(.*?)</aspect>', re.S)
+
+
+def fake_comparison(prompt: str) -> dict:
+    aspects = []
+    for name, body in _ASPECT.findall(prompt):
+        first: dict[str, tuple[str, str]] = {}
+        for label, doc, text in _PASSAGE.findall(body):
+            sent = next((s for s in _SENT.split(html.unescape(text)) if len(s) > 25), None)
+            if sent and doc not in first:
+                first[doc] = (label, sent.strip())
+        docs = sorted(first)
+        diffs = [
+            {"text": f"Document {d} says: {first[d][1][:200]}", "sources": [first[d][0]]}
+            for d in docs
+        ]
+        sims = []
+        if len(docs) >= 2:
+            common = _terms(first[docs[0]][1]) & _terms(first[docs[1]][1])
+            if len(common) >= 3:
+                sims.append(
+                    {
+                        "text": "Both discuss: " + ", ".join(sorted(common)[:4]),
+                        "sources": [first[docs[0]][0], first[docs[1]][0]],
+                    }
+                )
+        aspects.append(
+            {
+                "aspect": name,
+                "similarities": sims,
+                "differences": diffs,
+                "conflicts": [],
+                "missing_information": [],
+            }
+        )
+    return {"summary": f"Compared {len(aspects)} aspects.", "aspects": aspects}
+
+
+def fake_version_summary(prompt: str) -> dict:
+    body = html.unescape(prompt)
+    lines = [ln for ln in body.splitlines() if ln.startswith(("ADDED", "REMOVED", "CHANGED"))]
+    return {
+        "summary": f"{len(lines)} change(s) between the versions.",
+        "notable_changes": [ln[:150] for ln in lines[:5]],
     }

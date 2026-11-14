@@ -119,7 +119,9 @@ async def ensure_indexes(db: AsyncDatabase) -> None:
                 raise
             # Same keys/name but different options (definition changed between releases):
             # drop the conflicting indexes by key pattern and recreate.
-            existing = {tuple(i["key"].items()): i["name"] async for i in await db[name].list_indexes()}
+            existing = {
+                tuple(i["key"].items()): i["name"] async for i in await db[name].list_indexes()
+            }
             for m in models:
                 key = tuple(m.document["key"].items())
                 if key in existing and existing[key] != "_id_":

@@ -110,11 +110,14 @@ async def run_job(
 ) -> ObjectId | None:
     """Run one job. Returns the id of a follow-up job the caller must enqueue (or None)."""
     head = await db.processing_jobs.find_one({"_id": job_id}, {"type": 1, "attempts": 1})
-    if head and head.get("type") == "insights":
-        from app.modules.insights.service import run_insights_job
+    jtype = head.get("type") if head else None
+    if jtype and jtype != "ingest":
+        # Async AI jobs (insights, research, comparison, report) share one retry policy: a handler
+        # raises RetryableError for transient failures and records its own terminal states.
+        from app.modules.ingestion.handlers import handler_for
 
         try:
-            await run_insights_job(db, settings, store, job_id)
+            await handler_for(jtype)(db, settings, store, job_id)
         except RetryableError as e:
             raise RetryLater(countdown=min(300, 10 * (head["attempts"] + 1))) from e
         return None

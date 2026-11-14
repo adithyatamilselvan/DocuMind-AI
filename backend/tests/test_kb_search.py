@@ -10,25 +10,47 @@ from .test_rag_api import FIN_BIO, setup
 
 async def test_kb_crud_membership_status_and_scoped_retrieval(client, app, ai):
     ws, base, (fin, bio) = await setup(client, app, FIN_BIO)
-    kb = (await client.post(f"{base}/knowledge-bases", json={"name": "Finance KB", "description": "d"})).json()
+    kb = (
+        await client.post(
+            f"{base}/knowledge-bases", json={"name": "Finance KB", "description": "d"}
+        )
+    ).json()
     assert kb["document_count"] == 0 and kb["index_status"] == "empty"
-    assert (await client.post(f"{base}/knowledge-bases", json={"name": "Finance KB"})).status_code == 409
-    bad = await client.post(f"{base}/knowledge-bases/{kb['id']}/documents", json={"document_ids": [str(ObjectId())]})
+    assert (
+        await client.post(f"{base}/knowledge-bases", json={"name": "Finance KB"})
+    ).status_code == 409
+    bad = await client.post(
+        f"{base}/knowledge-bases/{kb['id']}/documents", json={"document_ids": [str(ObjectId())]}
+    )
     assert bad.status_code == 400
-    r = await client.post(f"{base}/knowledge-bases/{kb['id']}/documents", json={"document_ids": [fin]})
+    r = await client.post(
+        f"{base}/knowledge-bases/{kb['id']}/documents", json={"document_ids": [fin]}
+    )
     assert r.json()["document_count"] == 1 and r.json()["index_status"] == "ready"
     detail = (await client.get(f"{base}/knowledge-bases/{kb['id']}")).json()
-    assert detail["status_counts"] == {"COMPLETED": 1} and detail["documents"][0]["title"] == "finance"
+    assert (
+        detail["status_counts"] == {"COMPLETED": 1} and detail["documents"][0]["title"] == "finance"
+    )
 
     # independent search and question answering through the KB scope
     f = {"knowledge_base_ids": [kb["id"]]}
-    out = await client.post(f"{base}/search", json={"query": "mitochondria energy", "mode": "keyword", "filters": f})
+    out = await client.post(
+        f"{base}/search", json={"query": "mitochondria energy", "mode": "keyword", "filters": f}
+    )
     assert out.json()["hits"] == []  # biology is outside the KB
-    out = await client.post(f"{base}/search", json={"query": "revenue", "mode": "keyword", "filters": f})
+    out = await client.post(
+        f"{base}/search", json={"query": "revenue", "mode": "keyword", "filters": f}
+    )
     assert {h["document_id"] for h in out.json()["hits"]} == {fin}
-    ans = (await client.post(f"{base}/ask", json={"question": "How did revenue grow in Europe?", "filters": f})).json()
+    ans = (
+        await client.post(
+            f"{base}/ask", json={"question": "How did revenue grow in Europe?", "filters": f}
+        )
+    ).json()
     assert ans["grounded"] and ans["citations"][0]["document_id"] == fin
-    miss = await client.post(f"{base}/ask", json={"question": "Calvin cycle photosynthesis chloroplasts", "filters": f})
+    miss = await client.post(
+        f"{base}/ask", json={"question": "Calvin cycle photosynthesis chloroplasts", "filters": f}
+    )
     assert miss.json()["insufficient_evidence"]
 
     c = (await client.post(f"{base}/conversations", json={"scope": f})).json()
@@ -36,7 +58,9 @@ async def test_kb_crud_membership_status_and_scoped_retrieval(client, app, ai):
 
     renamed = await client.patch(f"{base}/knowledge-bases/{kb['id']}", json={"name": "Renamed"})
     assert renamed.json()["name"] == "Renamed"
-    assert (await client.delete(f"{base}/knowledge-bases/{kb['id']}/documents/{fin}")).status_code == 204
+    assert (
+        await client.delete(f"{base}/knowledge-bases/{kb['id']}/documents/{fin}")
+    ).status_code == 204
     assert (await client.get(f"{base}/knowledge-bases/{kb['id']}")).json()["document_count"] == 0
     assert (await client.delete(f"{base}/knowledge-bases/{kb['id']}")).status_code == 204
     assert (await client.get(f"{base}/knowledge-bases/{kb['id']}")).status_code == 404
@@ -54,15 +78,27 @@ async def test_deleting_a_document_removes_it_from_knowledge_bases(client, app, 
 async def test_kb_status_reflects_failures_and_reindex_rebuilds_chunks(client, app, ai):
     ws, base, (fin, bio) = await setup(client, app, FIN_BIO)
     kb = (await client.post(f"{base}/knowledge-bases", json={"name": "K"})).json()
-    await client.post(f"{base}/knowledge-bases/{kb['id']}/documents", json={"document_ids": [fin, bio]})
+    await client.post(
+        f"{base}/knowledge-bases/{kb['id']}/documents", json={"document_ids": [fin, bio]}
+    )
     await app.state.db.documents.update_one({"_id": ObjectId(bio)}, {"$set": {"status": "FAILED"}})
-    assert (await client.get(f"{base}/knowledge-bases/{kb['id']}")).json()["index_status"] == "partial"
-    before = {c["chunk_id"] async for c in app.state.db.document_chunks.find({"document_id": ObjectId(fin)})}
+    assert (await client.get(f"{base}/knowledge-bases/{kb['id']}")).json()[
+        "index_status"
+    ] == "partial"
+    before = {
+        c["chunk_id"]
+        async for c in app.state.db.document_chunks.find({"document_id": ObjectId(fin)})
+    }
     r = await client.post(f"{base}/knowledge-bases/{kb['id']}/reindex")
     assert r.status_code == 202 and r.json()["queued"] == 2
     await app.state.queue.drain()
-    assert (await client.get(f"{base}/knowledge-bases/{kb['id']}")).json()["index_status"] == "ready"
-    after = {c["chunk_id"] async for c in app.state.db.document_chunks.find({"document_id": ObjectId(fin)})}
+    assert (await client.get(f"{base}/knowledge-bases/{kb['id']}")).json()[
+        "index_status"
+    ] == "ready"
+    after = {
+        c["chunk_id"]
+        async for c in app.state.db.document_chunks.find({"document_id": ObjectId(fin)})
+    }
     assert after and after == before  # same version -> same deterministic chunk ids, rebuilt
 
 
@@ -82,7 +118,11 @@ async def test_kb_permissions_and_isolation(client, new_client, app, ai):
         ows = (await o.get("/api/v1/workspaces")).json()[0]["id"]
         r = await o.post(
             f"/api/v1/workspaces/{ows}/search",
-            json={"query": "revenue", "mode": "keyword", "filters": {"knowledge_base_ids": [kb["id"]]}},
+            json={
+                "query": "revenue",
+                "mode": "keyword",
+                "filters": {"knowledge_base_ids": [kb["id"]]},
+            },
         )
         assert r.json()["hits"] == []  # another workspace cannot use this KB id as a scope
 
@@ -92,12 +132,21 @@ async def test_search_history_and_date_filter(client, app, ai):
     for q, m in (("revenue", "keyword"), ("revenue", "keyword"), ("mitochondria", "hybrid")):
         await client.post(f"{base}/search", json={"query": q, "mode": m})
     h = (await client.get(f"{base}/search/history")).json()
-    assert [(x["query"], x["mode"]) for x in h] == [("mitochondria", "hybrid"), ("revenue", "keyword")]
+    assert [(x["query"], x["mode"]) for x in h] == [
+        ("mitochondria", "hybrid"),
+        ("revenue", "keyword"),
+    ]
     assert h[1]["results"] >= 1
     future = (utcnow() + timedelta(days=1)).isoformat()
     past = (utcnow() - timedelta(days=1)).isoformat()
-    none = await client.post(f"{base}/search", json={"query": "revenue", "mode": "keyword", "filters": {"created_from": future}})
-    some = await client.post(f"{base}/search", json={"query": "revenue", "mode": "keyword", "filters": {"created_from": past}})
+    none = await client.post(
+        f"{base}/search",
+        json={"query": "revenue", "mode": "keyword", "filters": {"created_from": future}},
+    )
+    some = await client.post(
+        f"{base}/search",
+        json={"query": "revenue", "mode": "keyword", "filters": {"created_from": past}},
+    )
     assert none.json()["hits"] == [] and some.json()["hits"]
     assert (await client.delete(f"{base}/search/history")).status_code == 204
     assert (await client.get(f"{base}/search/history")).json() == []
@@ -108,7 +157,9 @@ async def test_search_filters_by_category_tag_and_type(client, app, ai):
     await client.patch(f"{base}/documents/{fin}", json={"category": "Finance", "tags": ["q1"]})
 
     async def hits(query, **filters):
-        r = await client.post(f"{base}/search", json={"query": query, "mode": "keyword", "filters": filters})
+        r = await client.post(
+            f"{base}/search", json={"query": query, "mode": "keyword", "filters": filters}
+        )
         return r.json()["hits"]
 
     assert {h["document_id"] for h in await hits("revenue", category="Finance")} == {fin}
