@@ -43,6 +43,13 @@ limiter = SlidingWindowLimiter()
 
 def rate_limit(name: str, limit: int, window_s: int) -> Callable[[Request], Awaitable[None]]:
     async def dep(request: Request) -> None:
-        limiter.check(f"{name}:{client_ip(request)}", limit, window_s)
+        if not get_settings().rate_limit_enabled:
+            return
+        key = f"{name}:{client_ip(request)}"
+        shared = getattr(request.app.state, "redis_limiter", None)
+        if shared is not None:
+            await shared.check(key, limit, window_s)
+        else:
+            limiter.check(key, limit, window_s)
 
     return dep

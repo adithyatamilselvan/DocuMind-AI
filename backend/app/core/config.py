@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     smtp_password: SecretStr = Field(SecretStr(""), alias="SMTP_PASSWORD")
     email_from: str = Field("DocuMind <no-reply@example.com>", alias="EMAIL_FROM")
 
+    # Security integrations
+    malware_scan: Literal["off", "clamav"] = Field("off", alias="MALWARE_SCAN")
+    clamav_host: str = Field("localhost", alias="CLAMAV_HOST")
+    clamav_port: int = Field(3310, alias="CLAMAV_PORT")
+    # "redis" is required when running more than one API replica
+    rate_limit_backend: Literal["memory", "redis"] = Field("memory", alias="RATE_LIMIT_BACKEND")
+
     # Uploads
     max_upload_mb: int = Field(50, alias="MAX_UPLOAD_MB")
     max_files_per_upload: int = Field(20, alias="MAX_FILES_PER_UPLOAD")

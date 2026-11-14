@@ -15,6 +15,7 @@ from app.core.ids import utcnow
 from app.modules.documents import service
 from app.modules.documents.schemas import DocumentOut
 from app.modules.documents.states import DocumentStatus
+from app.modules.documents.malware import build_scanner
 from app.modules.documents.validation import detect_type, sanitize_filename
 from app.modules.ingestion.orchestrator import create_job
 from app.modules.ingestion.queue import JobQueue
@@ -85,6 +86,7 @@ async def ingest_new_document(
     try:
         received = await spool_upload(file, settings.max_upload_bytes)
         detected = detect_type(received.path, filename)
+        await build_scanner(settings).scan_file(received.path)
         if dup := await _find_duplicate(db, workspace_id, received.sha256):
             return UploadResult(
                 filename, "duplicate", existing_document_id=str(dup["_id"]),
@@ -146,6 +148,7 @@ async def add_version(
     try:
         received = await spool_upload(file, settings.max_upload_bytes)
         detected = detect_type(received.path, filename)
+        await build_scanner(settings).scan_file(received.path)
         if received.sha256 == document["sha256"]:
             return UploadResult(
                 filename, "duplicate", existing_document_id=str(document["_id"]),

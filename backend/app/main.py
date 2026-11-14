@@ -12,6 +12,7 @@ from app.core.email import build_email_sender
 from app.core.errors import install_error_handlers
 from app.core.indexes import ensure_indexes
 from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.security import BodyLimitMiddleware, SecurityHeadersMiddleware
 from app.modules.ingestion.queue import build_queue, recover_stuck_jobs
 from app.modules.ingestion.stages import register_default_stages
 from app.modules.vector_search.factory import build_vector_store
@@ -31,6 +32,16 @@ async def lifespan(app: FastAPI):
     app.state.store = build_object_store(settings)
     app.state.queue = build_queue(app.state.db, settings, app.state.store)
     app.state.vectors = build_vector_store(settings)
+    app.state.redis = None
+    app.state.redis_limiter = None
+    if settings.rate_limit_backend == "redis" or settings.job_backend == "celery":
+        from redis.asyncio import from_url
+
+        app.state.redis = from_url(settings.redis_url)
+        if settings.rate_limit_backend == "redis":
+            from app.core.redis_limiter import RedisLimiter
+
+            app.state.redis_limiter = RedisLimiter(app.state.redis)
     register_default_stages()
     await client.admin.command("ping")
     await ensure_indexes(app.state.db)
@@ -47,6 +58,8 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await app.state.queue.close()
+        if app.state.redis is not None:
+            await app.state.redis.aclose()
         await client.close()
 
 
@@ -68,6 +81,8 @@ def create_app() -> FastAPI:
             allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
             allow_headers=["Content-Type", "X-CSRF-Token"],
         )
+    app.add_middleware(BodyLimitMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.cookie_secure)
     app.add_middleware(RequestIdMiddleware)
     app.include_router(api_router)
 
@@ -83,9 +98,16 @@ def create_app() -> FastAPI:
 
         await app.state.db.command("ping")
         vec = await app.state.vectors.health(app.state.db)
+        redis_ok = None
+        if app.state.redis is not None:
+            try:
+                redis_ok = bool(await app.state.redis.ping())
+            except Exception:
+                redis_ok = False
+        ok = vec["ready"] and redis_ok is not False
         return JSONResponse(
-            {"status": "ok" if vec["ready"] else "degraded", "search": vec},
-            status_code=200 if vec["ready"] else 503,
+            {"status": "ok" if ok else "degraded", "search": vec, "redis": redis_ok},
+            status_code=200 if ok else 503,
         )
 
     return app

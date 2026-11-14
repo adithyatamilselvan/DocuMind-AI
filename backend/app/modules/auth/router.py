@@ -1,8 +1,10 @@
+import hashlib
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.core.config import Settings, get_settings
+from app.core.errors import AppError
 from app.core.rate_limit import client_ip, rate_limit
 from app.core.security import csrf_token_for
 from app.modules.audit import service as audit
@@ -74,7 +76,15 @@ async def register(
 
 @router.post("/login", response_model=UserOut, dependencies=[Depends(rate_limit("login", 10, 300))])
 async def login(body: LoginIn, request: Request, response: Response, db: DB, settings: SettingsDep):
-    user = await service.authenticate(db, body.email, body.password)
+    try:
+        user = await service.authenticate(db, body.email, body.password)
+    except AppError as e:
+        if e.code == "invalid_credentials":  # no email/password is stored, only a short hash for correlation
+            await audit.record(
+                db, action="auth.login_failed", actor_id=None, ip=client_ip(request),
+                target={"email_hash": hashlib.sha256(body.email.lower().encode()).hexdigest()[:12]},
+            )
+        raise
     token = await service.create_session(
         db, settings, user["_id"], client_ip(request), request.headers.get("user-agent")
     )
