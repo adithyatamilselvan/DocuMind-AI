@@ -14,6 +14,7 @@ from app.modules.knowledge_bases.router import router as kb_router
 from app.modules.rag.router import router as rag_router
 from app.modules.reports.router import router as reports_router
 from app.modules.research.router import router as research_router
+from app.modules.users.privacy import router as privacy_router
 from app.modules.users.router import router as users_router
 from app.modules.workspaces.router import router as workspaces_router
 
@@ -33,3 +34,4 @@ api_router.include_router(kb_router)
 api_router.include_router(research_router)
 api_router.include_router(comparison_router)
 api_router.include_router(reports_router)
+api_router.include_router(privacy_router)

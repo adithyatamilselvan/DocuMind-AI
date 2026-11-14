@@ -150,7 +150,12 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete My Account
+         * @description Permanently delete the account. Workspaces where the user is the only member are purged;
+         *     workspaces with other members require transferring ownership first.
+         */
+        delete: operations["delete_my_account_api_v1_users_me_delete"];
         options?: never;
         head?: never;
         /** Update Profile */
@@ -203,7 +208,10 @@ export interface paths {
         get: operations["get_workspace_api_v1_workspaces__workspace_id__get"];
         put?: never;
         post?: never;
-        /** Delete Workspace */
+        /**
+         * Delete Workspace
+         * @description Permanently deletes the workspace with all its documents, files, analyses and conversations.
+         */
         delete: operations["delete_workspace_api_v1_workspaces__workspace_id__delete"];
         options?: never;
         head?: never;
@@ -451,6 +459,46 @@ export interface paths {
         };
         /** Overview */
         get: operations["overview_api_v1_workspaces__workspace_id__analytics_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/analytics/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit Logs
+         * @description Workspace audit trail (admins only).
+         */
+        get: operations["audit_logs_api_v1_workspaces__workspace_id__analytics_audit_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/analytics/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage
+         * @description AI usage in the last `days` days, by kind/provider/model and by user (admins only).
+         */
+        get: operations["usage_api_v1_workspaces__workspace_id__analytics_usage_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -956,6 +1004,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export My Data
+         * @description GDPR-style export of everything tied to the signed-in user (no other users' data, no secrets).
+         */
+        get: operations["export_my_data_api_v1_users_me_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1092,6 +1160,26 @@ export interface components {
             };
             /** Prompt Version */
             prompt_version: string;
+        };
+        /** AuditEntry */
+        AuditEntry: {
+            /** Id */
+            id: string;
+            /** Action */
+            action: string;
+            /** Actor Name */
+            actor_name: string | null;
+            /** Target */
+            target: {
+                [key: string]: unknown;
+            };
+            /** Ip */
+            ip: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** Body_upload_documents_api_v1_workspaces__workspace_id__documents_upload_post */
         Body_upload_documents_api_v1_workspaces__workspace_id__documents_upload_post: {
@@ -1292,6 +1380,11 @@ export interface components {
         CreateWorkspaceIn: {
             /** Name */
             name: string;
+        };
+        /** DeleteAccountIn */
+        DeleteAccountIn: {
+            /** Password */
+            password: string;
         };
         /** DocumentOut */
         DocumentOut: {
@@ -1611,6 +1704,17 @@ export interface components {
             /** Ai Tokens 30D */
             ai_tokens_30d: number;
         };
+        /** Page[AuditEntry] */
+        Page_AuditEntry_: {
+            /** Items */
+            items: components["schemas"]["AuditEntry"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
         /** Page[DocumentOut] */
         Page_DocumentOut_: {
             /** Items */
@@ -1855,6 +1959,24 @@ export interface components {
             /** Error */
             error?: string | null;
         };
+        /** UsageOut */
+        UsageOut: {
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Totals */
+            totals: components["schemas"]["UsageRow"][];
+            /** By User */
+            by_user: components["schemas"]["UserUsage"][];
+            /** Requests */
+            requests: number;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        };
         /** UsagePoint */
         UsagePoint: {
             /** Date */
@@ -1863,6 +1985,21 @@ export interface components {
             requests: number;
             /** Tokens */
             tokens: number;
+        };
+        /** UsageRow */
+        UsageRow: {
+            /** Kind */
+            kind: string;
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /** Requests */
+            requests: number;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
         };
         /** UserOut */
         UserOut: {
@@ -1896,6 +2033,17 @@ export interface components {
              * @default true
              */
             notifications_email: boolean;
+        };
+        /** UserUsage */
+        UserUsage: {
+            /** User Id */
+            user_id: string | null;
+            /** Name */
+            name: string | null;
+            /** Requests */
+            requests: number;
+            /** Tokens */
+            tokens: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -2195,6 +2343,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    delete_my_account_api_v1_users_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3102,6 +3281,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Overview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audit_logs_api_v1_workspaces__workspace_id__analytics_audit_logs_get: {
+        parameters: {
+            query?: {
+                action?: string | null;
+                actor_id?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AuditEntry_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_api_v1_workspaces__workspace_id__analytics_usage_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageOut"];
                 };
             };
             /** @description Validation Error */
@@ -4414,6 +4662,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_my_data_api_v1_users_me_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

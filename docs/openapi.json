@@ -249,6 +249,39 @@
       }
     },
     "/api/v1/users/me": {
+      "delete": {
+        "tags": [
+          "privacy"
+        ],
+        "summary": "Delete My Account",
+        "description": "Permanently delete the account. Workspaces where the user is the only member are purged;\nworkspaces with other members require transferring ownership first.",
+        "operationId": "delete_my_account_api_v1_users_me_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "tags": [
           "users"
@@ -483,6 +516,7 @@
           "workspaces"
         ],
         "summary": "Delete Workspace",
+        "description": "Permanently deletes the workspace with all its documents, files, analyses and conversations.",
         "operationId": "delete_workspace_api_v1_workspaces__workspace_id__delete",
         "parameters": [
           {
@@ -1763,6 +1797,158 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/analytics/audit-logs": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Audit Logs",
+        "description": "Workspace audit trail (admins only).",
+        "operationId": "audit_logs_api_v1_workspaces__workspace_id__analytics_audit_logs_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "name": "actor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AuditEntry_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/analytics/usage": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Usage",
+        "description": "AI usage in the last `days` days, by kind/provider/model and by user (admins only).",
+        "operationId": "usage_api_v1_workspaces__workspace_id__analytics_usage_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageOut"
                 }
               }
             }
@@ -3816,6 +4002,26 @@
         }
       }
     },
+    "/api/v1/users/me/export": {
+      "get": {
+        "tags": [
+          "privacy"
+        ],
+        "summary": "Export My Data",
+        "description": "GDPR-style export of everything tied to the signed-in user (no other users' data, no secrets).",
+        "operationId": "export_my_data_api_v1_users_me_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -4123,6 +4329,60 @@
           "prompt_version"
         ],
         "title": "AskOut"
+      },
+      "AuditEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Name"
+          },
+          "target": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Target"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "actor_name",
+          "target",
+          "ip",
+          "created_at"
+        ],
+        "title": "AuditEntry"
       },
       "Body_upload_documents_api_v1_workspaces__workspace_id__documents_upload_post": {
         "properties": {
@@ -4698,6 +4958,21 @@
           "name"
         ],
         "title": "CreateWorkspaceIn"
+      },
+      "DeleteAccountIn": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "DeleteAccountIn"
       },
       "DocumentOut": {
         "properties": {
@@ -5678,6 +5953,37 @@
         ],
         "title": "Overview"
       },
+      "Page_AuditEntry_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[AuditEntry]"
+      },
       "Page_DocumentOut_": {
         "properties": {
           "items": {
@@ -6495,6 +6801,51 @@
         ],
         "title": "UploadResultOut"
       },
+      "UsageOut": {
+        "properties": {
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Since"
+          },
+          "totals": {
+            "items": {
+              "$ref": "#/components/schemas/UsageRow"
+            },
+            "type": "array",
+            "title": "Totals"
+          },
+          "by_user": {
+            "items": {
+              "$ref": "#/components/schemas/UserUsage"
+            },
+            "type": "array",
+            "title": "By User"
+          },
+          "requests": {
+            "type": "integer",
+            "title": "Requests"
+          },
+          "tokens_in": {
+            "type": "integer",
+            "title": "Tokens In"
+          },
+          "tokens_out": {
+            "type": "integer",
+            "title": "Tokens Out"
+          }
+        },
+        "type": "object",
+        "required": [
+          "since",
+          "totals",
+          "by_user",
+          "requests",
+          "tokens_in",
+          "tokens_out"
+        ],
+        "title": "UsageOut"
+      },
       "UsagePoint": {
         "properties": {
           "date": {
@@ -6517,6 +6868,44 @@
           "tokens"
         ],
         "title": "UsagePoint"
+      },
+      "UsageRow": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "requests": {
+            "type": "integer",
+            "title": "Requests"
+          },
+          "tokens_in": {
+            "type": "integer",
+            "title": "Tokens In"
+          },
+          "tokens_out": {
+            "type": "integer",
+            "title": "Tokens Out"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "provider",
+          "model",
+          "requests",
+          "tokens_in",
+          "tokens_out"
+        ],
+        "title": "UsageRow"
       },
       "UserOut": {
         "properties": {
@@ -6574,6 +6963,48 @@
         },
         "type": "object",
         "title": "UserPreferences"
+      },
+      "UserUsage": {
+        "properties": {
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "requests": {
+            "type": "integer",
+            "title": "Requests"
+          },
+          "tokens": {
+            "type": "integer",
+            "title": "Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "requests",
+          "tokens"
+        ],
+        "title": "UserUsage"
       },
       "ValidationError": {
         "properties": {

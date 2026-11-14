@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.core.ids import to_oid
 from app.modules.audit import service as audit
@@ -55,8 +55,11 @@ async def update_workspace(body: UpdateWorkspaceIn, ctx: Admin, db: DB):
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_workspace(ctx: Owner, db: DB) -> Response:
-    await service.soft_delete_workspace(db, ctx.workspace_id)
+async def delete_workspace(request: Request, ctx: Owner, db: DB) -> Response:
+    """Permanently deletes the workspace with all its documents, files, analyses and conversations."""
+    from app.modules.workspaces.purge import purge_workspace
+
+    await purge_workspace(db, request.app.state.store, ctx.workspace_id)
     await audit.record(
         db, action="workspace.delete", actor_id=ctx.user_id, workspace_id=ctx.workspace_id
     )

@@ -1,4 +1,4 @@
-import { FileOutput, FileText, FlaskConical, Library, LayoutDashboard, MessagesSquare, Search, Sparkles, type LucideIcon, Settings, Upload, Users } from "lucide-react";
+import { FileOutput, History, FileText, FlaskConical, Library, LayoutDashboard, MessagesSquare, Search, Sparkles, type LucideIcon, Settings, Upload, Users } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 export type NavGroup = { label: string; items: NavItem[] };
@@ -31,6 +31,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Administration",
     items: [
       { href: "/workspace", label: "Workspace", icon: Users },
+      { href: "/activity", label: "Activity", icon: History },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },

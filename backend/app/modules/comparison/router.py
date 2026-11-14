@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from app.core.config import Settings, get_settings
 from app.core.errors import bad_request, conflict, not_found
 from app.core.ids import PyId, to_oid
+from app.modules.audit import service as audit
 from app.modules.auth.deps import DB
 from app.modules.comparison import service
 from app.modules.documents.deps import Queue
@@ -74,6 +75,8 @@ async def compare_documents(body: CompareIn, ctx: Editor, db: DB, queue: Queue, 
         title=body.title or " vs ".join(d["title"] for d in ordered)[:200], document_ids=ids,
         version_ids=[d["current_version_id"] for d in ordered], aspects=body.aspects,
     )  # fmt: skip
+    await audit.record(db, action="comparison.documents", actor_id=ctx.user_id, workspace_id=ctx.workspace_id,
+                       target={"comparison": str(rec["_id"])})
     await queue.enqueue(job["_id"])
     return ComparisonOut.from_doc(rec)
 

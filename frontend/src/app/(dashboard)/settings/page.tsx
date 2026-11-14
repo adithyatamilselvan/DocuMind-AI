@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { PageHeader } from "@/components/page-header";
+import { PrivacyCard, UsageCard } from "@/components/settings-extras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,6 +172,8 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         )}
+        <UsageCard />
+        <PrivacyCard />
       </div>
     </>
   );
