@@ -41,16 +41,25 @@ async def test_real_semantic_retrieval_through_the_full_pipeline(client, app, mo
     for title, text in DOCS.items():
         await upload(client, base, f"{title}.txt", text.encode())
     await app.state.queue.drain()
-    statuses = {d["title"]: d["status"] for d in (await client.get(f"{base}/documents")).json()["items"]}
+    statuses = {
+        d["title"]: d["status"] for d in (await client.get(f"{base}/documents")).json()["items"]
+    }
     assert set(statuses.values()) == {"COMPLETED"}, statuses
     chunk = await app.state.db.document_chunks.find_one({})
-    assert chunk["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2" and len(chunk["embedding"]) == 384
+    assert (
+        chunk["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
+        and len(chunk["embedding"]) == 384
+    )
 
     hits_top1 = 0
     for question, expected in QUESTIONS:
-        r = await client.post(f"{base}/search", json={"query": question, "mode": "semantic", "limit": 3})
+        r = await client.post(
+            f"{base}/search", json={"query": question, "mode": "semantic", "limit": 3}
+        )
         assert r.status_code == 200, r.text
         top = [h["document_title"] for h in r.json()["hits"]]
         print(f"{question!r} -> {top}")
         hits_top1 += top[:1] == [expected]
-    assert hits_top1 >= 4, f"only {hits_top1}/5 paraphrased questions retrieved the right document first"
+    assert hits_top1 >= 4, (
+        f"only {hits_top1}/5 paraphrased questions retrieved the right document first"
+    )

@@ -77,9 +77,12 @@ class Settings(BaseSettings):
     local_scan_limit: int = Field(20000, alias="LOCAL_VECTOR_SCAN_LIMIT")
 
     # LLM. "fake" is a deterministic extractive stand-in for tests/offline demos (blocked in production).
-    llm_provider: Literal["anthropic", "fake"] = Field("anthropic", alias="LLM_PROVIDER")
+    llm_provider: Literal["anthropic", "cohere", "fake"] = Field("anthropic", alias="LLM_PROVIDER")
     anthropic_api_key: SecretStr = Field(SecretStr(""), alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field("claude-opus-5-5", alias="ANTHROPIC_MODEL")
+    # Cohere (a free Trial key works; it is limited to 40 calls/min and 1000/month and is never replaced by a paid service)
+    cohere_api_key: SecretStr = Field(SecretStr(""), alias="COHERE_API_KEY")
+    cohere_model: str = Field("command-a-03-2025", alias="COHERE_MODEL")
     llm_effort: Literal["low", "medium", "high", "xhigh", "max"] = Field(
         "medium", alias="LLM_EFFORT"
     )
@@ -128,7 +131,10 @@ class Settings(BaseSettings):
 
     @property
     def llm_configured(self) -> bool:
-        return self.llm_provider == "fake" or bool(self.anthropic_api_key.get_secret_value())
+        if self.llm_provider == "fake":
+            return True
+        key = self.cohere_api_key if self.llm_provider == "cohere" else self.anthropic_api_key
+        return bool(key.get_secret_value())
 
     @property
     def ai_external(self) -> bool:
@@ -137,7 +143,7 @@ class Settings(BaseSettings):
 
     @property
     def llm_external(self) -> bool:
-        return self.llm_provider == "anthropic"
+        return self.llm_provider in {"anthropic", "cohere"}
 
     @property
     def max_upload_bytes(self) -> int:

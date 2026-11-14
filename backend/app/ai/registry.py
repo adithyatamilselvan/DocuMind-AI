@@ -34,6 +34,8 @@ def get_llm(s: Settings) -> LLMProvider:
         s.anthropic_model,
         s.llm_effort,
         s.anthropic_api_key.get_secret_value(),
+        s.cohere_model,
+        s.cohere_api_key.get_secret_value(),
         s.env,
     )
     return _get(key, lambda: build_llm(s))  # type: ignore[return-value]

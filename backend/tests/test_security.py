@@ -16,7 +16,6 @@ from app.modules.documents.malware import ClamAVScanner
 from .conftest import enable_ai, first_workspace, register
 from .test_upload import TXT, files
 
-
 # ---------- headers and body limits ----------
 
 

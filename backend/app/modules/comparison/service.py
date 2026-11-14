@@ -51,7 +51,7 @@ def diff_versions(old: ExtractedDocument, new: ExtractedDocument) -> dict[str, A
             used: set[int] = set()
             for pa, ta in old_chunk:
                 best, score = None, 0.0
-                for k, (pb, tb) in enumerate(new_chunk):
+                for k, (_pb, tb) in enumerate(new_chunk):
                     if k in used:
                         continue
                     r = difflib.SequenceMatcher(a=ta, b=tb).ratio()

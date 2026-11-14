@@ -108,9 +108,8 @@ async def test_workspace_delete_purges_everything_including_files(client, new_cl
         await register(other, "o@example.com", "Other")
         ows = (await other.get("/api/v1/workspaces")).json()[0]["id"]
         await enable_ai(other, ows)
-        from .test_indexing import upload as up
-
         from .helpers import make_docx
+        from .test_indexing import upload as up
 
         other_doc = await up(
             other,

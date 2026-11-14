@@ -106,3 +106,10 @@ Phase 11: document insights (Pydantic-validated LLM output, async job, separate 
 - Last full backend run: 205 passed, 1 skipped (+2 env-leak failures fixed by hermetic conftest; re-run 55 core tests green). Core UI e2e 12/12.
 - Still unverified (needs your keys/infra): live Claude calls (answers, insights, research, comparison), Atlas Vector Search, Redis/Celery, S3/MinIO, Docker, real Tesseract.
 - Run locally: `.\start.ps1`; set ANTHROPIC_API_KEY in `.env`; local embeddings need `pip install -e ".[local]"` in backend.
+
+## Cohere (free Trial) support
+- `LLM_PROVIDER=cohere` + `COHERE_API_KEY` (+ optional `COHERE_MODEL`, default `command-a-03-2025`, verified live). Works without any Anthropic key.
+- Trial limits (observed in response headers): 40 calls/min, 1,000/month. Limit errors are shown to the user; no other provider is ever used as a fallback.
+- Cohere's structured output rejects JSON-schema size constraints and omits optional fields, so the schema sent is stripped of constraints with all fields required; Pydantic still validates.
+- Verified live: chat, streaming, structured output (all 7 schemas accepted), grounded answer with citation to the correct page, insights with verified quotes/pages, and the full browser workflow (`E2E_REAL_AI=1 npx playwright test e2e/real-ai.spec.ts --project=desktop`).
+- Quota tip: `RAG_MULTI_QUERY=false` saves one call per question (query rewriting still runs for follow-ups); each uploaded document uses >=1 call for insights (`INSIGHTS_ENABLED=false` disables).

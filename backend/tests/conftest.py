@@ -15,6 +15,8 @@ os.environ.update(
     LLM_PROVIDER="anthropic",
     ANTHROPIC_API_KEY="",
     OPENAI_API_KEY="",
+    COHERE_API_KEY="",
+    COHERE_MODEL="command-a-03-2025",
 )
 
 import httpx  # noqa: E402

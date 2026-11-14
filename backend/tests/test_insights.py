@@ -201,7 +201,7 @@ async def test_insights_are_generated_after_ingestion_and_stored_separately(clie
     assert (
         r["status"] == "completed"
         and r["model"] == "fake-extractive"
-        and r["prompt_version"] == "insights-1"
+        and r["prompt_version"] == "insights-2"
     )
     p = r["payload"]
     assert p["summary"] and p["executive_summary"] and p["key_findings"] and p["topics"]

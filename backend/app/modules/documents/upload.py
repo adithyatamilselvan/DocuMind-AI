@@ -13,9 +13,9 @@ from app.core.config import Settings
 from app.core.errors import AppError, conflict
 from app.core.ids import utcnow
 from app.modules.documents import service
+from app.modules.documents.malware import build_scanner
 from app.modules.documents.schemas import DocumentOut
 from app.modules.documents.states import DocumentStatus
-from app.modules.documents.malware import build_scanner
 from app.modules.documents.validation import detect_type, sanitize_filename
 from app.modules.ingestion.orchestrator import create_job
 from app.modules.ingestion.queue import JobQueue
