@@ -86,7 +86,7 @@ async def main(create: bool, smoke: bool) -> int:
                             "$vectorSearch": {
                                 "index": VECTOR_INDEX,
                                 "path": "embedding",
-                                "queryVector": [0.0] * settings.embedding_dim,
+                                "queryVector": [1.0] + [0.0] * (settings.embedding_dim - 1),  # cosine rejects zero vectors
                                 "numCandidates": 10,
                                 "limit": 1,
                             }

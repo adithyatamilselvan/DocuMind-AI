@@ -24,8 +24,10 @@ RUN pip install ".[local]"
 ARG EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('${EMBEDDING_MODEL}')"
 
-RUN useradd --create-home --uid 10001 appuser && mkdir -p /data && chown appuser /data \
-    && chown -R appuser /opt/hf-cache
+# LOCAL_STORAGE_DIR defaults to the relative path ".local-data/objects" (= /app/.local-data/objects).
+# /app is root-owned, so the runtime user can only create it if it already exists and is owned by it.
+RUN useradd --create-home --uid 10001 appuser && mkdir -p /data /app/.local-data/objects \
+    && chown -R appuser /data /app/.local-data /opt/hf-cache
 USER appuser
 
 EXPOSE 10000
