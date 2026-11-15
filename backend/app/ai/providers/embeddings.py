@@ -6,6 +6,7 @@ import hashlib
 import logging
 import math
 import re
+import threading
 from typing import Protocol
 
 import httpx
@@ -92,21 +93,32 @@ class LocalSentenceTransformer:
         self.version = settings.embedding_version
         self.max_batch = settings.embedding_batch_size
         self._model = None
+        self._lock = threading.Lock()  # _load runs in worker threads; load the model once
 
     def _load(self):  # noqa: ANN202
-        if self._model is None:
+        if self._model is not None:
+            return self._model
+        with self._lock:
+            if self._model is not None:
+                return self._model
             try:
                 from sentence_transformers import SentenceTransformer
             except ImportError as e:
                 raise PermanentError(
                     "Local embeddings need the 'sentence-transformers' package on the server"
                 ) from e
-            self._model = SentenceTransformer(self.model)
-            actual = self._model.get_sentence_embedding_dimension()
+            model = SentenceTransformer(self.model)
+            # get_sentence_embedding_dimension is deprecated in newer sentence-transformers
+            actual = (
+                model.get_embedding_dimension()
+                if hasattr(model, "get_embedding_dimension")
+                else model.get_sentence_embedding_dimension()
+            )
             if actual != self.dimensions:
                 raise PermanentError(
                     f"EMBEDDING_DIM={self.dimensions} but {self.model} produces {actual}"
                 )
+            self._model = model  # published only after validation
         return self._model
 
     def _encode(self, texts: list[str]) -> list[list[float]]:
