@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,7 +18,10 @@ class Settings(BaseSettings):
 
     # MongoDB
     mongodb_uri: str = Field("mongodb://localhost:27017", alias="MONGODB_URI")
-    mongodb_db: str = Field("documind_dev", alias="MONGODB_DB")
+    # MONGODB_DATABASE is preferred; MONGODB_DB is still accepted for existing setups.
+    mongodb_db: str = Field(
+        "documind_dev", validation_alias=AliasChoices("MONGODB_DATABASE", "MONGODB_DB")
+    )
     # "atlas" uses $vectorSearch/$search; "local" uses bounded brute-force cosine + $text (dev only)
     vector_backend: Literal["atlas", "local"] = Field("local", alias="VECTOR_BACKEND")
 
